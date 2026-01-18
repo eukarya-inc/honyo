@@ -133,4 +133,4 @@ export function setPausedState(paused: boolean): void {
   saveConfig();
 }
 
-export type { ApiKeys, Config, DisplayMode, CustomModel } from './types';
+export type { ApiKeys, Config, DisplayMode, CustomModel, ShortcutConfig } from './types';

@@ -8,7 +8,9 @@ import {
   updateConfig,
   type ApiKeys,
   type CustomModel,
+  type ShortcutConfig,
 } from '../config/index.ts';
+import { getDefaultShortcut, formatShortcut, domCodeToKeycode } from '../keyboard/shortcut.ts';
 
 // Get __dirname in both ESM and CommonJS
 const getCurrentDir = (): string => {
@@ -124,4 +126,23 @@ export function setupSettingsIPC(): void {
     updateConfig({ openAtLogin });
     event.reply('open-at-login-saved', true);
   });
+
+  ipcMain.on('load-shortcut', event => {
+    const config = getConfig();
+    const shortcut = config.shortcut ?? getDefaultShortcut();
+    event.reply('shortcut-loaded', {
+      shortcut,
+      display: formatShortcut(shortcut),
+    });
+  });
+
+  ipcMain.on('save-shortcut', (event, shortcut: ShortcutConfig) => {
+    updateConfig({ shortcut });
+    event.reply('shortcut-saved', {
+      success: true,
+      display: formatShortcut(shortcut),
+    });
+  });
+
+  ipcMain.handle('convert-keycode', (_, code: string) => domCodeToKeycode(code));
 }

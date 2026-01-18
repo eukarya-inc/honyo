@@ -309,6 +309,37 @@ Ancient Greek"
         <div class="container">
           <h2>General Settings</h2>
 
+          <h3 style="margin-top: 0; margin-bottom: 15px; color: #444; font-size: 16px">
+            Keyboard Shortcut
+          </h3>
+          <div class="form-group">
+            <label>Translation Trigger</label>
+            <div style="display: flex; gap: 10px; align-items: center">
+              <input
+                type="text"
+                id="shortcut-display"
+                readonly
+                placeholder="Click 'Record' to set"
+                style="flex: 1"
+              />
+              <button id="record-shortcut-btn" onclick="startRecording()" style="min-width: 80px">
+                Record
+              </button>
+              <button onclick="resetShortcut()" style="min-width: 60px">Reset</button>
+            </div>
+            <div class="help-text">Press the key combination you want to use</div>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="double-press" />
+            <label for="double-press" class="checkbox-label"> Require double press </label>
+          </div>
+          <div class="help-text" style="margin-top: -15px; margin-left: 28px">
+            When enabled, you need to press the shortcut twice quickly to trigger translation.
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0" />
+
           <div class="checkbox-group">
             <input type="checkbox" id="auto-close-on-blur" />
             <label for="auto-close-on-blur" class="checkbox-label">
@@ -353,7 +384,11 @@ Ancient Greek"
         customModel: false,
         customLanguages: false,
         display: false,
+        shortcut: false,
       };
+
+      let currentShortcut = null;
+      let isRecording = false;
 
       // Tab switching
       function switchTab(tabName) {
@@ -372,6 +407,7 @@ Ancient Greek"
         ipcRenderer.send('load-custom-languages');
         ipcRenderer.send('load-auto-close-on-blur');
         ipcRenderer.send('load-open-at-login');
+        ipcRenderer.send('load-shortcut');
 
         // Add change listeners
         document
@@ -404,6 +440,9 @@ Ancient Greek"
         document
           .getElementById('open-at-login')
           .addEventListener('change', () => saveOpenAtLogin());
+        document
+          .getElementById('double-press')
+          .addEventListener('change', () => (pendingChanges.shortcut = true));
       });
 
       // API Keys functionality
@@ -542,6 +581,122 @@ Ancient Greek"
         }
       });
 
+      // Shortcut functionality
+      ipcRenderer.on('shortcut-loaded', (event, data) => {
+        currentShortcut = data.shortcut;
+        document.getElementById('shortcut-display').value = data.display;
+        document.getElementById('double-press').checked = data.shortcut.doublePress;
+      });
+
+      ipcRenderer.on('shortcut-saved', (event, data) => {
+        if (data.success) {
+          pendingChanges.shortcut = false;
+          document.getElementById('shortcut-display').value = data.display;
+          showStatus('Shortcut saved successfully!', false);
+        } else {
+          showStatus('Failed to save shortcut. Please try again.', true);
+        }
+      });
+
+      function startRecording() {
+        isRecording = true;
+        document.getElementById('shortcut-display').value = 'Press keys...';
+        const btn = document.getElementById('record-shortcut-btn');
+        btn.textContent = 'Cancel';
+        btn.onclick = cancelRecording;
+        document.addEventListener('keydown', recordKey);
+      }
+
+      function cancelRecording() {
+        isRecording = false;
+        const btn = document.getElementById('record-shortcut-btn');
+        btn.textContent = 'Record';
+        btn.onclick = startRecording;
+        document.removeEventListener('keydown', recordKey);
+        // Restore previous display
+        if (currentShortcut) {
+          ipcRenderer.send('load-shortcut');
+        }
+      }
+
+      function finishRecording() {
+        isRecording = false;
+        const btn = document.getElementById('record-shortcut-btn');
+        btn.textContent = 'Record';
+        btn.onclick = startRecording;
+        document.removeEventListener('keydown', recordKey);
+      }
+
+      async function recordKey(e) {
+        e.preventDefault();
+        if (!isRecording) return;
+
+        // Escape to cancel
+        if (e.key === 'Escape') {
+          cancelRecording();
+          return;
+        }
+
+        // Skip modifier-only presses
+        if (['Control', 'Meta', 'Alt', 'Shift'].includes(e.key)) {
+          return;
+        }
+
+        const keycode = await ipcRenderer.invoke('convert-keycode', e.code);
+        if (keycode === 0) {
+          document.getElementById('shortcut-display').value = 'Unsupported key';
+          setTimeout(cancelRecording, 1000);
+          return;
+        }
+
+        currentShortcut = {
+          keycode: keycode,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          shiftKey: e.shiftKey,
+          doublePress: document.getElementById('double-press').checked,
+        };
+
+        // Format display
+        const parts = [];
+        if (e.ctrlKey) parts.push('Ctrl');
+        if (e.metaKey) parts.push('Cmd');
+        if (e.altKey) parts.push('Alt');
+        if (e.shiftKey) parts.push('Shift');
+        parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+        document.getElementById('shortcut-display').value = parts.join('+');
+
+        pendingChanges.shortcut = true;
+        finishRecording();
+      }
+
+      function resetShortcut() {
+        currentShortcut = null;
+        pendingChanges.shortcut = true;
+        // Will use default when saved as null/undefined
+        document.getElementById('shortcut-display').value = 'Default (will apply on save)';
+      }
+
+      function saveShortcut() {
+        if (currentShortcut) {
+          currentShortcut.doublePress = document.getElementById('double-press').checked;
+          ipcRenderer.send('save-shortcut', currentShortcut);
+        } else {
+          // Reset to default - use navigator.platform to detect OS
+          const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+          const defaultShortcut = {
+            keycode: 46, // C key
+            ctrlKey: !isMac,
+            metaKey: isMac,
+            altKey: false,
+            shiftKey: false,
+            doublePress: document.getElementById('double-press').checked,
+          };
+          ipcRenderer.send('save-shortcut', defaultShortcut);
+        }
+      }
+
       // Save all function
       function saveAll() {
         const saveBtn = document.getElementById('save-all-btn');
@@ -562,13 +717,17 @@ Ancient Greek"
         if (pendingChanges.display) {
           saveDisplaySettings();
         }
+        if (pendingChanges.shortcut) {
+          saveShortcut();
+        }
 
         if (
           !pendingChanges.apiKeys &&
           !pendingChanges.customPrompt &&
           !pendingChanges.customModel &&
           !pendingChanges.customLanguages &&
-          !pendingChanges.display
+          !pendingChanges.display &&
+          !pendingChanges.shortcut
         ) {
           showStatus('No changes to save', false);
         }

@@ -17,8 +17,13 @@ import {
   createProfile,
   renameProfile,
   deleteProfile,
+  notifyConfigChanged,
   type Config,
 } from '../config/index.ts';
+import { languages } from '../language/constants.ts';
+import { getAvailableModels, getDefaultModelKey } from '../models-remote.ts';
+import { classifyModelTier } from '../models-tier.ts';
+import { DEFAULT_MODEL_KEY } from '../models.ts';
 import { resetPopupSize } from './popup.ts';
 import { getAIProvider } from '../translation/providers.ts';
 import { CUSTOM_MODEL_ID } from '../models.ts';
@@ -29,6 +34,7 @@ import {
   type CreateProfileRequest,
   type GeneratePromptRequest,
   type GeneratePromptResult,
+  type ModelOption,
   type ProfileSummary,
   type SettingsPatch,
   type SettingsSnapshot,
@@ -58,9 +64,9 @@ export function openSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 760,
-    height: 600,
-    minWidth: 640,
+    width: 840,
+    height: 620,
+    minWidth: 740,
     minHeight: 420,
     webPreferences: {
       preload: join(rootDir, 'build/preload/settings.cjs'),
@@ -140,6 +146,27 @@ export function notifySettingsProfilesChanged(): void {
 
 // --- Snapshot mapping ----------------------------------------------------
 
+function modelOptions(): ModelOption[] {
+  const defaultName = getModelInfo(DEFAULT_MODEL_KEY)?.name ?? getDefaultModelKey();
+  const options: ModelOption[] = [
+    { id: DEFAULT_MODEL_KEY, name: `Default (${defaultName})`, group: 'default' },
+  ];
+  const advanced: ModelOption[] = [];
+  for (const provider of ['anthropic', 'openai', 'google'] as const) {
+    for (const [id, info] of Object.entries(getAvailableModels())) {
+      if (info.provider !== provider) continue;
+      if (classifyModelTier(info) === 'recommended') {
+        options.push({ id, name: info.name, group: provider });
+      } else {
+        advanced.push({ id, name: info.name, group: 'advanced' });
+      }
+    }
+  }
+  options.push(...advanced);
+  options.push({ id: CUSTOM_MODEL_ID, name: 'Custom Model', group: 'custom' });
+  return options;
+}
+
 function snapshot(): SettingsSnapshot {
   const config = getConfig();
   const keys = getApiKeys();
@@ -147,6 +174,12 @@ function snapshot(): SettingsSnapshot {
   return {
     profiles: listProfiles(),
     activeProfileId: getActiveProfileId(),
+    languageOptions: [...languages, ...(config.customLanguages ?? [])],
+    modelOptions: modelOptions(),
+    targetLanguage: config.targetLanguage,
+    secondaryLanguage: config.secondaryLanguage,
+    aiModel: config.aiModel,
+    displayMode: config.displayMode,
     anthropicKey: keys.anthropic ?? '',
     openaiKey: keys.openai ?? '',
     googleKey: keys.google ?? '',
@@ -178,6 +211,23 @@ function applyPatch(patch: SettingsPatch): void {
   if (Object.keys(baseUrls).length > 0) updateProviderBaseUrls(baseUrls);
 
   const updates: Partial<Config> = {};
+  // Languages: keep primary and secondary distinct by swapping, as the tray does.
+  const current = getConfig();
+  const target = patch.targetLanguage ?? current.targetLanguage;
+  const secondary = patch.secondaryLanguage ?? current.secondaryLanguage;
+  if (patch.targetLanguage !== undefined || patch.secondaryLanguage !== undefined) {
+    if (target === secondary) {
+      updates.targetLanguage = target;
+      updates.secondaryLanguage =
+        patch.targetLanguage !== undefined ? current.targetLanguage : current.secondaryLanguage;
+      if (updates.secondaryLanguage === target) updates.secondaryLanguage = current.targetLanguage;
+    } else {
+      updates.targetLanguage = target;
+      updates.secondaryLanguage = secondary;
+    }
+  }
+  if (patch.aiModel !== undefined) updates.aiModel = patch.aiModel;
+  if (patch.displayMode !== undefined) updates.displayMode = patch.displayMode;
   if (patch.customPrompt !== undefined) updates.customPrompt = patch.customPrompt.trim();
   if (patch.customLanguages !== undefined) {
     updates.customLanguages = patch.customLanguages
@@ -186,11 +236,11 @@ function applyPatch(patch: SettingsPatch): void {
       .filter(l => l.length > 0);
   }
   if (patch.customModelName !== undefined || patch.customModelProvider !== undefined) {
-    const current = getConfig().customModel;
-    const model = (patch.customModelName ?? current?.model ?? '').trim();
-    const provider = patch.customModelProvider ?? current?.provider ?? '';
+    const existing = current.customModel;
+    const model = (patch.customModelName ?? existing?.model ?? '').trim();
+    const provider = patch.customModelProvider ?? existing?.provider ?? '';
     if (provider !== '') updates.customModel = { model, provider };
-    else if (current) updates.customModel = { model, provider: current.provider };
+    else if (existing) updates.customModel = { model, provider: existing.provider };
   }
   if (patch.autoCloseOnBlur !== undefined) updates.autoCloseOnBlur = patch.autoCloseOnBlur;
   if (patch.enableStreaming !== undefined) updates.enableStreaming = patch.enableStreaming;
@@ -255,6 +305,8 @@ export function setupSettingsIPC(): void {
 
   ipcMain.handle(SETTINGS_CHANNELS.save, (_event, patch: SettingsPatch): void => {
     applyPatch(patch);
+    // Languages, model and display mode are shown in the tray: rebuild it.
+    notifyConfigChanged();
   });
 
   ipcMain.handle(SETTINGS_CHANNELS.resetPopupSize, (): void => {

@@ -51,7 +51,11 @@
         min-width: 0;
       }
       body header.toolbar #profile-select {
-        max-width: 140px;
+        flex: 0 1 150px;
+        min-width: 90px;
+      }
+      body header.toolbar #profile-actions {
+        flex: none;
       }
       body header.toolbar #save-button {
         justify-self: end;
@@ -194,15 +198,16 @@
         </x-button>
       </div>
       <x-tabs id="tabs">
-        <x-tab value="api-keys" toggled><x-label>API Keys</x-label></x-tab>
+        <x-tab value="translation" toggled><x-label>Translation</x-label></x-tab>
         <x-tab value="customization"><x-label>Customization</x-label></x-tab>
+        <x-tab value="api-keys"><x-label>API Keys</x-label></x-tab>
         <x-tab value="general"><x-label>General</x-label></x-tab>
       </x-tabs>
       <x-button id="save-button" toggled><x-label>Save</x-label></x-button>
     </header>
 
     <main>
-      <section data-panel="api-keys">
+      <section data-panel="api-keys" hidden>
         <span class="group-title">API Keys</span>
         <div class="group">
           <div class="row">
@@ -270,26 +275,43 @@
         </span>
       </section>
 
-      <section data-panel="customization" hidden>
-        <span class="group-title">Custom Prompt</span>
+      <section data-panel="translation">
+        <span class="group-title">Languages</span>
         <div class="group">
-          <div class="row stacked">
+          <div class="row">
             <div class="text">
-              <x-label>Additional instructions for translation</x-label>
-              <span class="hint">Added to every translation request.</span>
+              <x-label>Primary</x-label>
+              <span class="hint">Text in any other language is translated into this one.</span>
             </div>
-            <x-texteditor data-field="customPrompt">
-              <x-label>e.g. Use formal language, keep product names in English…</x-label>
-            </x-texteditor>
+            <x-select data-field="targetLanguage">
+              <x-menu id="target-language-menu"></x-menu>
+            </x-select>
           </div>
           <div class="row">
             <div class="text">
-              <x-label>Generate with AI</x-label>
+              <x-label>Secondary</x-label>
               <span class="hint"
-                >Describe what you want and let the selected model write the prompt.</span
+                >Text already in the primary language is translated into this one.</span
               >
             </div>
-            <x-button id="open-generate-button"><x-label>Generate…</x-label></x-button>
+            <x-select data-field="secondaryLanguage">
+              <x-menu id="secondary-language-menu"></x-menu>
+            </x-select>
+          </div>
+        </div>
+
+        <span class="group-title">Model</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>AI model</x-label>
+              <span class="hint"
+                >Default follows the recommended fast model as the catalog updates.</span
+              >
+            </div>
+            <x-select data-field="aiModel">
+              <x-menu id="ai-model-menu"></x-menu>
+            </x-select>
           </div>
         </div>
 
@@ -318,6 +340,30 @@
             </x-select>
           </div>
         </div>
+      </section>
+
+      <section data-panel="customization" hidden>
+        <span class="group-title">Custom Prompt</span>
+        <div class="group">
+          <div class="row stacked">
+            <div class="text">
+              <x-label>Additional instructions for translation</x-label>
+              <span class="hint">Added to every translation request.</span>
+            </div>
+            <x-texteditor data-field="customPrompt">
+              <x-label>e.g. Use formal language, keep product names in English…</x-label>
+            </x-texteditor>
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Generate with AI</x-label>
+              <span class="hint"
+                >Describe what you want and let the selected model write the prompt.</span
+              >
+            </div>
+            <x-button id="open-generate-button"><x-label>Generate…</x-label></x-button>
+          </div>
+        </div>
 
         <span class="group-title">Custom Languages</span>
         <div class="group">
@@ -334,6 +380,26 @@
       </section>
 
       <section data-panel="general" hidden>
+        <span class="group-title">Results</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Show translations as</x-label>
+              <span class="hint"
+                >A notification copies the result to the clipboard automatically.</span
+              >
+            </div>
+            <x-select data-field="displayMode">
+              <x-menu>
+                <x-menuitem value="notification" toggled
+                  ><x-label>Notification &amp; copy</x-label></x-menuitem
+                >
+                <x-menuitem value="popup"><x-label>Popup window</x-label></x-menuitem>
+              </x-menu>
+            </x-select>
+          </div>
+        </div>
+
         <span class="group-title">Popup</span>
         <div class="group">
           <div class="row">

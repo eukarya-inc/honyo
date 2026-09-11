@@ -9,6 +9,22 @@ export interface ProfileSummary {
   name: string;
 }
 
+export type ModelOptionGroup =
+  | 'default'
+  | 'anthropic'
+  | 'openai'
+  | 'google'
+  | 'advanced'
+  | 'custom';
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  group: ModelOptionGroup;
+}
+
+export type DisplayMode = 'notification' | 'popup';
+
 /**
  * Flat, renderer-friendly view of everything the settings window edits. The
  * main process maps this to/from the real Config + profile shape, so the
@@ -18,6 +34,13 @@ export interface ProfileSummary {
 export interface SettingsSnapshot {
   profiles: ProfileSummary[];
   activeProfileId: string;
+  /** Choices for the language and model selects (built-in + custom). */
+  languageOptions: string[];
+  modelOptions: ModelOption[];
+  targetLanguage: string;
+  secondaryLanguage: string;
+  aiModel: string;
+  displayMode: DisplayMode;
   anthropicKey: string;
   openaiKey: string;
   googleKey: string;
@@ -36,7 +59,9 @@ export interface SettingsSnapshot {
 }
 
 /** Keys the form edits; profile metadata is managed through the profile API. */
-export type SettingsPatch = Partial<Omit<SettingsSnapshot, 'profiles' | 'activeProfileId'>>;
+export type SettingsPatch = Partial<
+  Omit<SettingsSnapshot, 'profiles' | 'activeProfileId' | 'languageOptions' | 'modelOptions'>
+>;
 
 export interface GeneratePromptRequest {
   currentPrompt: string;

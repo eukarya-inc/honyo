@@ -93,6 +93,16 @@ To use the translation features, you need to configure API keys for your preferr
    - **Google AI**: Get your key from [makersuite.google.com](https://makersuite.google.com/app/apikey)
 4. Click "Save"
 
+### Settings window
+
+Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
+languages, model, display mode); the Settings window has all of them:
+
+- **Translation**: primary / secondary language, AI model, custom model
+- **Customization**: custom prompt (with AI assist), custom languages
+- **API Keys**: per-provider keys and optional gateway endpoints
+- **General**: result display mode, popup behaviour, launch at login
+
 ### Language Settings
 
 The app automatically detects your system language and sets appropriate defaults:
@@ -223,7 +233,7 @@ Access these options by clicking the system tray icon:
 - **Primary/Secondary Language**: Set your translation language preferences (26+ built-in languages + custom)
 - **Display Mode**: Choose between notification and popup window
 - **AI Model**: Choose which AI model to use for translations (latest Claude, GPT, and Gemini models — auto-updated — or a custom model)
-- **Settings**: Configure API keys, custom instructions, models, languages, and display settings
+- **Settings**: Everything above and more — the tray menu is a shortcut to the most-used settings
 - **Pause Translation**: Temporarily disable the translation feature
 - **Stop Current Translation**: Cancel ongoing translation
 - **Check for Updates**: Check for new versions with progress display

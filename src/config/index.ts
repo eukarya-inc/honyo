@@ -179,9 +179,17 @@ export function getActiveProfileId(): string {
   return activeProfile().id;
 }
 
-/** Called after the active profile or the profile list changes (tray rebuild). */
+/**
+ * Called after the active profile, the profile list, or any setting shown in
+ * the tray menu changes, so the menu can be rebuilt.
+ */
 export function setProfileChangedCallback(callback: () => void): void {
   profileChangedCallback = callback;
+}
+
+/** Ask the tray (and an open settings window) to re-read the config. */
+export function notifyConfigChanged(): void {
+  profileChangedCallback?.();
 }
 
 function profilesChanged(): void {

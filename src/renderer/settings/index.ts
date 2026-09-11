@@ -7,7 +7,12 @@
 // SettingsSnapshot, one element to settings.html, and the mapping in the main
 // process — nothing here needs to change.
 import { applyNativeTheme } from '../theme.ts';
-import type { ProfileSummary, SettingsPatch, SettingsSnapshot } from '../../ipc/settings.ts';
+import type {
+  ModelOption,
+  ProfileSummary,
+  SettingsPatch,
+  SettingsSnapshot,
+} from '../../ipc/settings.ts';
 
 type FieldKey = keyof SettingsPatch;
 type FieldValue = SettingsSnapshot[FieldKey];
@@ -97,6 +102,40 @@ function notify(message: string, isError = false): void {
   note.classList.toggle('error', isError);
   note.opened = false;
   note.opened = true;
+}
+
+// --- Select options ------------------------------------------------------------
+
+function menuItem(value: string, label: string): HTMLElement {
+  const item = document.createElement('x-menuitem');
+  item.setAttribute('value', value);
+  const text = document.createElement('x-label');
+  text.textContent = label;
+  item.append(text);
+  return item;
+}
+
+function fillLanguageMenu(menu: HTMLElement, options: string[]): void {
+  menu.replaceChildren(...options.map(l => menuItem(l, l)));
+}
+
+// Models: Default, then recommended models grouped by provider, then the
+// advanced tier, then Custom — separated by rules, mirroring the tray menu.
+function fillModelMenu(menu: HTMLElement, options: ModelOption[]): void {
+  const nodes: HTMLElement[] = [];
+  let lastGroup: ModelOption['group'] | null = null;
+  for (const option of options) {
+    if (lastGroup !== null && option.group !== lastGroup) nodes.push(document.createElement('hr'));
+    nodes.push(menuItem(option.id, option.name));
+    lastGroup = option.group;
+  }
+  menu.replaceChildren(...nodes);
+}
+
+function renderOptionMenus(snapshot: SettingsSnapshot): void {
+  fillLanguageMenu($('#target-language-menu'), snapshot.languageOptions);
+  fillLanguageMenu($('#secondary-language-menu'), snapshot.languageOptions);
+  fillModelMenu($('#ai-model-menu'), snapshot.modelOptions);
 }
 
 // --- Profiles ------------------------------------------------------------------
@@ -219,6 +258,8 @@ function setupProfiles(): void {
 
 async function loadIntoForm(): Promise<void> {
   loaded = await window.honyo.load();
+  // Menus must exist before a select's value can be applied.
+  renderOptionMenus(loaded);
   for (const [key, el] of fields) {
     writeField(el, loaded[key]);
   }

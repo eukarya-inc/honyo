@@ -98,10 +98,10 @@ To use the translation features, you need to configure API keys for your preferr
 Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
 languages, model, display mode); the Settings window has all of them:
 
+- **General**: result display mode, popup behaviour, launch at login
 - **Translation**: primary / secondary language, AI model, custom model
 - **Customization**: custom prompt (with AI assist), custom languages
 - **API Keys**: per-provider keys and optional gateway endpoints
-- **General**: result display mode, popup behaviour, launch at login
 
 ### Language Settings
 
@@ -125,7 +125,7 @@ endpoints. Popup, display and startup settings are shared by all profiles.
 
 - Switch profiles from the tray menu (**Profile: …**) or the selector at the top-left of the
   Settings window.
-- Use the pencil menu next to the selector to create, duplicate, rename or delete a profile.
+- The bottom of that selector's menu has New / Duplicate / Rename / Delete.
   Duplicating copies the API keys too, which is handy for "same keys, different prompt".
 - On first launch after updating, your existing settings become a profile named **Default**.
 

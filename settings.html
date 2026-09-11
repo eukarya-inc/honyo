@@ -54,9 +54,6 @@
         flex: 0 1 150px;
         min-width: 90px;
       }
-      body header.toolbar #profile-actions {
-        flex: none;
-      }
       body header.toolbar #save-button {
         justify-self: end;
       }
@@ -186,22 +183,12 @@
         <x-select id="profile-select" size="small">
           <x-menu id="profile-menu"></x-menu>
         </x-select>
-        <x-button size="small" skin="flat" id="profile-actions">
-          <x-icon href="#edit"></x-icon>
-          <x-menu>
-            <x-menuitem id="profile-new"><x-label>New Profile…</x-label></x-menuitem>
-            <x-menuitem id="profile-duplicate"><x-label>Duplicate…</x-label></x-menuitem>
-            <x-menuitem id="profile-rename"><x-label>Rename…</x-label></x-menuitem>
-            <hr />
-            <x-menuitem id="profile-delete"><x-label>Delete</x-label></x-menuitem>
-          </x-menu>
-        </x-button>
       </div>
       <x-tabs id="tabs">
-        <x-tab value="translation" toggled><x-label>Translation</x-label></x-tab>
+        <x-tab value="general" toggled><x-label>General</x-label></x-tab>
+        <x-tab value="translation"><x-label>Translation</x-label></x-tab>
         <x-tab value="customization"><x-label>Customization</x-label></x-tab>
         <x-tab value="api-keys"><x-label>API Keys</x-label></x-tab>
-        <x-tab value="general"><x-label>General</x-label></x-tab>
       </x-tabs>
       <x-button id="save-button" toggled><x-label>Save</x-label></x-button>
     </header>
@@ -275,7 +262,7 @@
         </span>
       </section>
 
-      <section data-panel="translation">
+      <section data-panel="translation" hidden>
         <span class="group-title">Languages</span>
         <div class="group">
           <div class="row">
@@ -379,7 +366,7 @@
         </div>
       </section>
 
-      <section data-panel="general" hidden>
+      <section data-panel="general">
         <span class="group-title">Results</span>
         <div class="group">
           <div class="row">

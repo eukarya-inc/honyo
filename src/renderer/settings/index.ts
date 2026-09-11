@@ -140,21 +140,30 @@ function renderOptionMenus(snapshot: SettingsSnapshot): void {
 
 // --- Profiles ------------------------------------------------------------------
 
+// Management actions live at the bottom of the profile popup, macOS-style.
+// Their values carry an "action:" prefix so the change handler can tell them
+// apart from real profile ids.
+const PROFILE_ACTIONS: Array<{ id: string; label: string }> = [
+  { id: 'action:new', label: 'New Profile…' },
+  { id: 'action:duplicate', label: 'Duplicate…' },
+  { id: 'action:rename', label: 'Rename…' },
+  { id: 'action:delete', label: 'Delete' },
+];
+
 function renderProfileMenu(profiles: ProfileSummary[], activeId: string): void {
   const menu = $('#profile-menu');
-  menu.replaceChildren(
-    ...profiles.map(p => {
-      const item = document.createElement('x-menuitem');
-      item.setAttribute('value', p.id);
-      if (p.id === activeId) item.setAttribute('toggled', '');
-      const label = document.createElement('x-label');
-      label.textContent = p.name;
-      item.append(label);
-      return item;
-    }),
-  );
+  const items = profiles.map(p => {
+    const item = menuItem(p.id, p.name);
+    if (p.id === activeId) item.setAttribute('toggled', '');
+    return item;
+  });
+  const actions = PROFILE_ACTIONS.map(a => {
+    const item = menuItem(a.id, a.label);
+    if (a.id === 'action:delete' && profiles.length <= 1) item.setAttribute('disabled', '');
+    return item;
+  });
+  menu.replaceChildren(...items, document.createElement('hr'), ...actions);
   $<XValueElement>('#profile-select').value = activeId;
-  $<XButtonElement>('#profile-delete').disabled = profiles.length <= 1;
 }
 
 type ProfileDialogMode = 'create' | 'duplicate' | 'rename';
@@ -213,20 +222,27 @@ async function switchProfile(id: string): Promise<void> {
   notify(`Switched to "${loaded?.profiles.find(p => p.id === id)?.name ?? ''}"`);
 }
 
+function openDeleteDialog(): void {
+  if (!loaded) return;
+  const active = loaded.profiles.find(p => p.id === loaded?.activeProfileId);
+  $('#profile-delete-name').textContent = active?.name ?? '';
+  $<HTMLDialogElement>('#profile-delete-dialog').showModal();
+}
+
 function setupProfiles(): void {
   const select = $<XValueElement>('#profile-select');
   select.addEventListener('change', () => {
-    void switchProfile(String(select.value ?? ''));
-  });
-
-  $('#profile-new').addEventListener('click', () => openProfileDialog('create'));
-  $('#profile-duplicate').addEventListener('click', () => openProfileDialog('duplicate'));
-  $('#profile-rename').addEventListener('click', () => openProfileDialog('rename'));
-  $('#profile-delete').addEventListener('click', () => {
-    if (!loaded) return;
-    const active = loaded.profiles.find(p => p.id === loaded?.activeProfileId);
-    $('#profile-delete-name').textContent = active?.name ?? '';
-    $<HTMLDialogElement>('#profile-delete-dialog').showModal();
+    const value = String(select.value ?? '');
+    if (!value.startsWith('action:')) {
+      void switchProfile(value);
+      return;
+    }
+    // Restore the popup's displayed value, then run the action.
+    select.value = loaded?.activeProfileId ?? null;
+    if (value === 'action:new') openProfileDialog('create');
+    else if (value === 'action:duplicate') openProfileDialog('duplicate');
+    else if (value === 'action:rename') openProfileDialog('rename');
+    else if (value === 'action:delete') openDeleteDialog();
   });
 
   $('#profile-dialog-cancel').addEventListener('click', () =>

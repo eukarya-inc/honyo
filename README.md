@@ -91,9 +91,9 @@ To use the translation features, you need to configure API keys for your preferr
 1. Click on the system tray icon
 2. Select "Settings..."
 3. In the "API Keys" tab, enter your API keys for the providers you want to use (Anthropic, OpenAI, Google AI, xAI):
-   - **Anthropic**: Get your key from [console.anthropic.com](https://console.anthropic.com/)
+   - **Anthropic**: Get your key from [platform.claude.com](https://platform.claude.com/)
    - **OpenAI**: Get your key from [platform.openai.com](https://platform.openai.com/api-keys)
-   - **Google AI**: Get your key from [makersuite.google.com](https://makersuite.google.com/app/apikey)
+   - **Google AI**: Get your key from [aistudio.google.com](https://aistudio.google.com/app/apikey)
 4. Click "Save"
 
 ### Settings window

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { AI_MODELS, DEFAULT_AI_MODEL, type AIModelInfo } from './models.ts';
+import {
+  AI_MODELS,
+  DEFAULT_AI_MODEL,
+  DEFAULT_MODEL_KEY,
+  CUSTOM_MODEL_ID,
+  resolveModelKey,
+  type AIModelInfo,
+} from './models.ts';
 
 describe('AI Models', () => {
   describe('AI_MODELS', () => {
@@ -42,5 +49,20 @@ describe('AI Models', () => {
       expect(model?.provider).toBe('anthropic');
       expect(model?.model).toBe('claude-sonnet-5');
     });
+  });
+});
+
+describe('resolveModelKey', () => {
+  it('maps the default sentinel to the concrete default model', () => {
+    expect(resolveModelKey(DEFAULT_MODEL_KEY)).toBe(DEFAULT_AI_MODEL);
+  });
+
+  it('passes other keys through unchanged', () => {
+    expect(resolveModelKey('gpt-4o-mini')).toBe('gpt-4o-mini');
+    expect(resolveModelKey(CUSTOM_MODEL_ID)).toBe(CUSTOM_MODEL_ID);
+  });
+
+  it('does not collide with a real model key', () => {
+    expect(AI_MODELS).not.toHaveProperty(DEFAULT_MODEL_KEY);
   });
 });

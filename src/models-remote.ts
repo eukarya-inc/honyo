@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { AI_MODELS, CUSTOM_MODEL_ID, type AIModelInfo } from './models.ts';
+import { AI_MODELS, CUSTOM_MODEL_ID, resolveModelKey, type AIModelInfo } from './models.ts';
 import { limitModels } from './models-filter.ts';
 
 type Provider = 'anthropic' | 'openai' | 'google';
@@ -255,7 +255,8 @@ export function getAvailableModels(): Record<string, AIModelInfo> {
 
   // Safety net: keep the selected model resolvable even if it dropped out of the
   // fetched/capped list (refreshModels also pins it into the cache itself).
-  const key = getSelectedModelKey?.();
+  const rawKey = getSelectedModelKey?.();
+  const key = rawKey ? resolveModelKey(rawKey) : undefined;
   if (key && key !== CUSTOM_MODEL_ID && !result[key]) {
     const info = AI_MODELS[key];
     if (info) result[key] = info;
@@ -265,12 +266,14 @@ export function getAvailableModels(): Record<string, AIModelInfo> {
 }
 
 /**
- * Look up a model by its config key, preferring the dynamic registry and
- * falling back to the static list (so a previously-selected static/default key
- * keeps working even when a fetched list is present).
+ * Look up a model by its config key (the DEFAULT_MODEL_KEY sentinel resolves to
+ * the current default), preferring the dynamic registry and falling back to the
+ * static list (so a previously-selected static/default key keeps working even
+ * when a fetched list is present).
  */
 export function getModelInfo(modelId: string): AIModelInfo | undefined {
-  return getAvailableModels()[modelId] ?? AI_MODELS[modelId];
+  const key = resolveModelKey(modelId);
+  return getAvailableModels()[key] ?? AI_MODELS[key];
 }
 
 function serializeModels(models: Partial<Record<Provider, AIModelInfo[]>>): string {
@@ -284,8 +287,9 @@ function serializeModels(models: Partial<Record<Provider, AIModelInfo[]>>): stri
  * static AI_MODELS. Mutates the passed-in lists.
  */
 function pinSelectedModel(models: Partial<Record<Provider, AIModelInfo[]>>): void {
-  const key = getSelectedModelKey?.();
-  if (!key || key === CUSTOM_MODEL_ID) return;
+  const rawKey = getSelectedModelKey?.();
+  if (!rawKey || rawKey === CUSTOM_MODEL_ID) return;
+  const key = resolveModelKey(rawKey);
 
   const info = buildAvailableModels(cache)[key] ?? AI_MODELS[key];
   if (!info) return;

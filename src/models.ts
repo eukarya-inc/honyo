@@ -104,3 +104,13 @@ export const AI_MODELS: Record<string, AIModelInfo> = {
 // fast small model is fully sufficient, so responses arrive noticeably sooner.
 export const DEFAULT_AI_MODEL = 'claude-4.5-haiku';
 export const CUSTOM_MODEL_ID = 'custom-model';
+
+// Special config value meaning "follow whatever the app currently recommends".
+// It resolves to DEFAULT_AI_MODEL at use time, so users who keep it get the new
+// default automatically when it changes in a later release.
+export const DEFAULT_MODEL_KEY = 'default';
+
+/** Map the DEFAULT_MODEL_KEY sentinel to the concrete default model key. */
+export function resolveModelKey(key: string): string {
+  return key === DEFAULT_MODEL_KEY ? DEFAULT_AI_MODEL : key;
+}

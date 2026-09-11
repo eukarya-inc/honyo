@@ -5,7 +5,12 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { languages } from '../language/index.ts';
-import { CUSTOM_MODEL_ID, type AIModelInfo } from '../models.ts';
+import {
+  CUSTOM_MODEL_ID,
+  DEFAULT_MODEL_KEY,
+  DEFAULT_AI_MODEL,
+  type AIModelInfo,
+} from '../models.ts';
 import { getAvailableModels, getModelInfo } from '../models-remote.ts';
 import { classifyModelTier, type ModelTier } from '../models-tier.ts';
 import { getConfig, updateConfig, getPausedState, setPausedState } from '../config/index.ts';
@@ -127,7 +132,9 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
       label: `AI Model: ${
         config.aiModel === CUSTOM_MODEL_ID
           ? 'Custom Model'
-          : (getModelInfo(config.aiModel)?.name ?? 'Unknown')
+          : config.aiModel === DEFAULT_MODEL_KEY
+            ? `Default (${getModelInfo(DEFAULT_AI_MODEL)?.name ?? DEFAULT_AI_MODEL})`
+            : (getModelInfo(config.aiModel)?.name ?? 'Unknown')
       }`,
       submenu: ((): MenuItemConstructorOptions[] => {
         const select = (modelId: string): void => {
@@ -168,7 +175,17 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
           return items;
         };
 
-        const menuItems = flatten(byProvider('recommended'));
+        // "Default" follows the app-recommended model across releases.
+        const menuItems: MenuItemConstructorOptions[] = [
+          {
+            label: `Default (${getModelInfo(DEFAULT_AI_MODEL)?.name ?? DEFAULT_AI_MODEL})`,
+            type: 'radio',
+            checked: config.aiModel === DEFAULT_MODEL_KEY,
+            click: (): void => select(DEFAULT_MODEL_KEY),
+          },
+          { type: 'separator' },
+          ...flatten(byProvider('recommended')),
+        ];
         const advanced = flatten(byProvider('advanced'));
         if (advanced.length > 0) {
           menuItems.push({ type: 'separator' });

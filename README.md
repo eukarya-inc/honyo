@@ -279,6 +279,7 @@ npm start
 | `HONYO_USER_DATA_DIR` | Use a separate config/cache directory so a dev instance can run next to an installed Honyo |
 | `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
 | `HONYO_THEME_PLATFORM=win32\|linux` | Preview another OS's settings theme (Fluent / Adwaita) |
+| `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB` and `HONYO_THEME=light\|dark`) |
 
 ### Project Structure
@@ -301,7 +302,8 @@ src/
 The settings window is built with [Xel](https://xel-toolkit.org/), a widget toolkit with
 native-looking themes: Cupertino on macOS, Fluent on Windows, Adwaita on Linux, each
 following the system light/dark mode. The renderer runs with context isolation and
-talks to the main process only through the typed API in `src/ipc/settings.ts`.
+talks to the main process only through the typed API in `src/ipc/settings.ts`. The popup
+window uses the same preload/context-isolation setup via `src/ipc/popup.ts`.
 ```
 
 ### Tech Stack

@@ -11,7 +11,12 @@ import {
   setupShutdownHandlers,
   checkAccessibilityPermission,
 } from './app/index.ts';
-import { setupPopupIPC } from './ui/popup.ts';
+import {
+  setupPopupIPC,
+  showTranslationPopup,
+  updatePopupLanguages,
+  debugCapturePopup,
+} from './ui/popup.ts';
 import { setupAutoUpdater } from './app/updater.ts';
 
 // Initialize the app
@@ -65,6 +70,14 @@ function initialize(): void {
 
     // Dev aid: HONYO_OPEN_SETTINGS=1 opens the settings window on launch.
     if (process.env.HONYO_OPEN_SETTINGS) openSettingsWindow();
+
+    // Dev aid: HONYO_POPUP_SCREENSHOT=path captures a sample popup and quits.
+    const popupShot = process.env.HONYO_POPUP_SCREENSHOT;
+    if (popupShot) {
+      showTranslationPopup('こんにちは、世界。これはサンプルの翻訳です。', 'Hello, world.');
+      updatePopupLanguages('English', 'Japanese');
+      debugCapturePopup(popupShot);
+    }
 
     // Setup keyboard handler
     setupKeyboardHandler();

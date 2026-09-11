@@ -2,6 +2,10 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
     <title>Translation</title>
     <style>
       * {
@@ -278,7 +282,6 @@
           <button
             class="back-btn header-btn"
             id="back-btn"
-            onclick="backTranslate()"
             title="Back-translate"
             aria-label="Back-translate"
             disabled
@@ -299,7 +302,7 @@
               />
             </svg>
           </button>
-          <button class="copy-btn header-btn" onclick="copyTranslation()">
+          <button class="copy-btn header-btn">
             <svg
               class="btn-icon"
               viewBox="0 0 16 16"
@@ -327,7 +330,7 @@
             </svg>
             Copy
           </button>
-          <button class="close-btn" onclick="closePopup()">×</button>
+          <button class="close-btn">×</button>
         </div>
       </div>
       <div class="content">
@@ -339,260 +342,6 @@
       </div>
     </div>
 
-    <script>
-      const { ipcRenderer } = require('electron');
-      let currentTranslation = '';
-      let currentFontSize = 14;
-      // Back-translation is a view toggle over the same #translation-text element.
-      let backTranslation = null; // cached back-translation for the current text
-      let view = 'translation'; // 'translation' | 'back'
-      let isBackLoading = false;
-      // Detected language pairs ({ source, target }) for each view, when known.
-      let currentLangs = null; // for the translation view
-      let backLangs = null; // for the back-translation view
-
-      function formatLangs(l) {
-        return l.source + ' → ' + l.target;
-      }
-
-      function reversedLangs(l) {
-        return { source: l.target, target: l.source };
-      }
-
-      // The header title doubles as the language-direction indicator for the
-      // current view; falls back to the app name when no pair is known.
-      function updateHeaderTitle() {
-        const el = document.getElementById('header-title-text');
-        let text = 'Honyo Translator';
-        if (view === 'back') {
-          if (backLangs) text = formatLangs(backLangs);
-          else if (currentLangs) text = formatLangs(reversedLangs(currentLangs));
-        } else if (currentLangs) {
-          text = formatLangs(currentLangs);
-        }
-        el.textContent = text;
-      }
-
-      function hideCaption() {
-        const caption = document.getElementById('back-caption');
-        caption.classList.remove('error');
-        caption.textContent = '';
-        caption.style.display = 'none';
-      }
-
-      function applyFontSize(size) {
-        currentFontSize = size;
-        document.getElementById('translation-text').style.fontSize = size + 'px';
-      }
-
-      // Receive popup display config (font size)
-      ipcRenderer.on('popup-config', (event, cfg) => {
-        const size = cfg && typeof cfg.fontSize === 'number' ? cfg.fontSize : 14;
-        applyFontSize(size);
-      });
-
-      // Enable the toggle only when there is a finished translation and nothing
-      // is in flight.
-      function updateBackButtonState() {
-        document.getElementById('back-btn').disabled =
-          !currentTranslation || isStreaming || isBackLoading;
-      }
-
-      // Render the current view (translation vs back-translation) into the main
-      // text area, update the header language indicator + toggle button, and
-      // clear any leftover error caption. Does not touch the disabled state
-      // (see updateBackButtonState).
-      function renderView() {
-        const textEl = document.getElementById('translation-text');
-        const btn = document.getElementById('back-btn');
-        if (view === 'back') {
-          textEl.textContent = backTranslation ?? '';
-          setBackButtonLabel(btn, 'Show translation');
-          btn.classList.add('active');
-        } else {
-          textEl.textContent = currentTranslation;
-          setBackButtonLabel(btn, 'Back-translate');
-          btn.classList.remove('active');
-        }
-        hideCaption();
-        updateHeaderTitle();
-      }
-
-      // The back button is icon-only; convey its meaning via title + aria-label.
-      function setBackButtonLabel(btn, label) {
-        btn.title = label;
-        btn.setAttribute('aria-label', label);
-      }
-
-      // Drop any cached back-translation and return to the translation view.
-      // Called whenever a new translation arrives.
-      function resetBackState() {
-        backTranslation = null;
-        backLangs = null;
-        isBackLoading = false;
-        view = 'translation';
-        hideCaption();
-        const btn = document.getElementById('back-btn');
-        btn.classList.remove('active', 'loading');
-        setBackButtonLabel(btn, 'Back-translate');
-        updateHeaderTitle();
-      }
-
-      // Context menu for translation text
-      function showContextMenu(e) {
-        e.preventDefault();
-        const selectedText = window.getSelection().toString();
-        ipcRenderer.send('show-context-menu', { selectedText, hasSelection: !!selectedText });
-      }
-
-      // Add context menu to translation text
-      document.addEventListener('DOMContentLoaded', () => {
-        const translationText = document.getElementById('translation-text');
-        translationText.addEventListener('contextmenu', showContextMenu);
-      });
-
-      // Show loading state
-      let isStreaming = false;
-      ipcRenderer.on('translation-loading', () => {
-        currentTranslation = '';
-        currentLangs = null;
-        document.getElementById('spinner-container').classList.add('active');
-        document.getElementById('translation-text').style.display = 'none';
-        document.querySelector('.copy-btn').disabled = true;
-        resetBackState();
-        updateBackButtonState();
-      });
-
-      // Language direction for the current translation (may arrive mid-stream).
-      ipcRenderer.on('translation-langs', (event, data) => {
-        currentLangs =
-          data && data.sourceLanguage && data.targetLanguage
-            ? { source: data.sourceLanguage, target: data.targetLanguage }
-            : null;
-        updateHeaderTitle();
-      });
-
-      // Receive translation data
-      ipcRenderer.on('translation-data', (event, data) => {
-        currentTranslation = data.translation;
-        document.getElementById('spinner-container').classList.remove('active');
-        document.getElementById('translation-text').style.display = 'block';
-        resetBackState();
-        renderView();
-        document.querySelector('.copy-btn').disabled = false;
-        updateBackButtonState();
-      });
-
-      // Receive streaming chunks (keep buttons disabled during streaming)
-      ipcRenderer.on('translation-chunk', (event, text) => {
-        isStreaming = true;
-        currentTranslation = text;
-        document.getElementById('spinner-container').classList.remove('active');
-        document.getElementById('translation-text').style.display = 'block';
-        resetBackState();
-        renderView();
-        // Keep buttons disabled until streaming completes
-        document.querySelector('.copy-btn').disabled = true;
-        updateBackButtonState();
-      });
-
-      // Receive streaming completion
-      ipcRenderer.on('translation-complete', (event, text) => {
-        isStreaming = false;
-        currentTranslation = text;
-        if (view === 'translation') {
-          document.getElementById('translation-text').textContent = text;
-        }
-        document.querySelector('.copy-btn').disabled = false;
-        updateBackButtonState();
-      });
-
-      // Back-translate button: toggles between the translation and its
-      // back-translation. Requests the back-translation once, then caches it.
-      function backTranslate() {
-        if (!currentTranslation || isStreaming || isBackLoading) return;
-
-        if (view === 'back') {
-          // Toggle back to the translation instantly.
-          view = 'translation';
-          renderView();
-          return;
-        }
-
-        if (backTranslation !== null) {
-          // Show the cached back-translation instantly.
-          view = 'back';
-          renderView();
-          return;
-        }
-
-        // No cache yet: request it, keeping the translation visible meanwhile.
-        // The button's pulse + disabled state signals loading (no caption).
-        isBackLoading = true;
-        hideCaption();
-        const btn = document.getElementById('back-btn');
-        btn.classList.add('loading');
-        btn.disabled = true;
-        ipcRenderer.send('back-translate', currentTranslation);
-      }
-
-      ipcRenderer.on('back-translation-result', (event, result) => {
-        // Ignore stale responses: a new translation resets isBackLoading, so a
-        // result arriving afterwards belongs to the previous text.
-        if (!isBackLoading) return;
-        isBackLoading = false;
-        document.getElementById('back-btn').classList.remove('loading');
-        backTranslation = result.translation;
-        backLangs =
-          result.sourceLanguage && result.targetLanguage
-            ? { source: result.sourceLanguage, target: result.targetLanguage }
-            : null;
-        view = 'back';
-        renderView();
-        updateBackButtonState();
-      });
-
-      ipcRenderer.on('back-translation-error', (event, message) => {
-        // Ignore stale responses (same reason as back-translation-result).
-        if (!isBackLoading) return;
-        // Stay on the translation view and cache nothing so the next click retries.
-        isBackLoading = false;
-        document.getElementById('back-btn').classList.remove('loading');
-        view = 'translation';
-        renderView();
-        const caption = document.getElementById('back-caption');
-        caption.classList.add('error');
-        caption.textContent = message || 'Back translation failed';
-        caption.style.display = 'block';
-        updateBackButtonState();
-      });
-
-      function copyTranslation() {
-        if (currentTranslation) {
-          ipcRenderer.send('copy-translation', currentTranslation);
-        }
-      }
-
-      function closePopup() {
-        ipcRenderer.send('close-popup');
-      }
-
-      // Handle copy all from context menu
-      ipcRenderer.on('copy-all-requested', () => {
-        copyTranslation();
-      });
-
-      // Handle keyboard shortcuts
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-          closePopup();
-        } else if (e.key === 'Enter') {
-          // Only allow copy when not streaming
-          if (!isStreaming && currentTranslation) {
-            copyTranslation();
-          }
-        }
-      });
-    </script>
+    <script src="build/renderer/popup.js"></script>
   </body>
 </html>

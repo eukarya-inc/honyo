@@ -1,4 +1,5 @@
-import { BrowserWindow, screen, ipcMain, clipboard, Menu } from 'electron';
+import { BrowserWindow, screen, ipcMain, clipboard, Menu, app } from 'electron';
+import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
@@ -150,8 +151,10 @@ export function showTranslationPopup(translation: string | null, originalText: s
     skipTaskbar: true,
     hasShadow: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: join(currentDir, '../../build/preload/popup.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
     },
   });
 
@@ -297,6 +300,24 @@ export function setupPopupIPC(): void {
       menu.popup({ window: popupWindow });
     },
   );
+}
+
+// Dev aid: HONYO_POPUP_SCREENSHOT=/path/out.png shows a sample translation,
+// captures the popup once rendered, then quits (see main.ts).
+export function debugCapturePopup(path: string): void {
+  if (!popupWindow || popupWindow.isDestroyed()) return;
+  popupWindow.webContents.on('console-message', event => {
+    console.log(`[popup:${event.level}] ${event.message} (${event.sourceId}:${event.lineNumber})`);
+  });
+  popupWindow.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      void (async (): Promise<void> => {
+        const image = await popupWindow?.webContents.capturePage();
+        if (image) writeFileSync(path, image.toPNG());
+        app.quit();
+      })();
+    }, 1500);
+  });
 }
 
 export function closePopup(): void {

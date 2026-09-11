@@ -15,11 +15,12 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 export async function buildRenderer(): Promise<void> {
   await esbuild.build({
-    entryPoints: [join(rootDir, 'src/preload/settings.ts')],
+    entryPoints: [join(rootDir, 'src/preload/settings.ts'), join(rootDir, 'src/preload/popup.ts')],
     bundle: true,
     // package.json is "type": "module", so a .js preload would be parsed as
     // ESM and `require` would be unavailable; .cjs forces CommonJS.
-    outfile: join(rootDir, 'build/preload/settings.cjs'),
+    outdir: join(rootDir, 'build/preload'),
+    outExtension: { '.js': '.cjs' },
     format: 'cjs',
     platform: 'node',
     target: 'node18',
@@ -28,9 +29,12 @@ export async function buildRenderer(): Promise<void> {
   });
 
   await esbuild.build({
-    entryPoints: [join(rootDir, 'src/renderer/settings/index.ts')],
+    entryPoints: {
+      settings: join(rootDir, 'src/renderer/settings/index.ts'),
+      popup: join(rootDir, 'src/renderer/popup/index.ts'),
+    },
     bundle: true,
-    outfile: join(rootDir, 'build/renderer/settings.js'),
+    outdir: join(rootDir, 'build/renderer'),
     format: 'iife',
     platform: 'browser',
     target: 'chrome140',

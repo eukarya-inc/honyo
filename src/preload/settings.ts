@@ -9,7 +9,8 @@ import {
 } from '../ipc/settings.ts';
 
 const api: HonyoSettingsApi = {
-  platform: process.platform,
+  // Dev aid: HONYO_THEME_PLATFORM=win32|linux previews another OS's theme.
+  platform: process.env.HONYO_THEME_PLATFORM ?? process.platform,
   load: () => ipcRenderer.invoke(SETTINGS_CHANNELS.load),
   save: (patch: SettingsPatch) => ipcRenderer.invoke(SETTINGS_CHANNELS.save, patch),
   resetPopupSize: () => ipcRenderer.invoke(SETTINGS_CHANNELS.resetPopupSize),

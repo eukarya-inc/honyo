@@ -278,6 +278,7 @@ npm start
 |----------|--------|
 | `HONYO_USER_DATA_DIR` | Use a separate config/cache directory so a dev instance can run next to an installed Honyo |
 | `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
+| `HONYO_THEME_PLATFORM=win32\|linux` | Preview another OS's settings theme (Fluent / Adwaita) |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB` and `HONYO_THEME=light\|dark`) |
 
 ### Project Structure

@@ -1,4 +1,4 @@
-import type { Tray } from 'electron';
+import type { Tray, MenuItemConstructorOptions } from 'electron';
 import { Menu, app } from 'electron';
 import { uIOhook } from 'uiohook-napi';
 import { readFileSync } from 'fs';
@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { languages } from '../language/index.ts';
 import { CUSTOM_MODEL_ID, type AIModelInfo } from '../models.ts';
 import { getAvailableModels, getModelInfo } from '../models-remote.ts';
+import { classifyModelTier, type ModelTier } from '../models-tier.ts';
 import { getConfig, updateConfig, getPausedState, setPausedState } from '../config/index.ts';
 import { openSettingsWindow } from './settings.ts';
 import {
@@ -128,85 +129,58 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
           ? 'Custom Model'
           : (getModelInfo(config.aiModel)?.name ?? 'Unknown')
       }`,
-      submenu: ((): Array<
-        | { label: string; type: 'radio'; checked: boolean; click: () => void }
-        | { type: 'separator' }
-      > => {
-        const menuItems: Array<
-          | { label: string; type: 'radio'; checked: boolean; click: () => void }
-          | { type: 'separator' }
-        > = [];
+      submenu: ((): MenuItemConstructorOptions[] => {
+        const select = (modelId: string): void => {
+          updateConfig({ aiModel: modelId });
+          tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
+        };
+        const radio = (modelId: string, modelInfo: AIModelInfo): MenuItemConstructorOptions => ({
+          label: modelInfo.name,
+          type: 'radio',
+          checked: config.aiModel === modelId,
+          click: (): void => select(modelId),
+        });
 
-        // Group models by provider
-        const modelsByProvider: {
-          anthropic: Array<[string, AIModelInfo]>;
-          openai: Array<[string, AIModelInfo]>;
-          google: Array<[string, AIModelInfo]>;
-        } = {
-          anthropic: [],
-          openai: [],
-          google: [],
+        // Group models by provider and tier. Recommended (fast, adequate)
+        // models are listed directly; advanced (overkill for translation)
+        // models are folded into a collapsed submenu.
+        type Entry = [string, AIModelInfo];
+        const byProvider = (tier: ModelTier): Record<AIModelInfo['provider'], Entry[]> => {
+          const groups: Record<AIModelInfo['provider'], Entry[]> = {
+            anthropic: [],
+            openai: [],
+            google: [],
+          };
+          for (const [modelId, modelInfo] of Object.entries(getAvailableModels())) {
+            if (classifyModelTier(modelInfo) === tier) {
+              groups[modelInfo.provider].push([modelId, modelInfo]);
+            }
+          }
+          return groups;
+        };
+        const flatten = (groups: Record<string, Entry[]>): MenuItemConstructorOptions[] => {
+          const items: MenuItemConstructorOptions[] = [];
+          for (const entries of Object.values(groups)) {
+            if (entries.length === 0) continue;
+            if (items.length > 0) items.push({ type: 'separator' });
+            for (const [modelId, modelInfo] of entries) items.push(radio(modelId, modelInfo));
+          }
+          return items;
         };
 
-        for (const [modelId, modelInfo] of Object.entries(getAvailableModels())) {
-          modelsByProvider[modelInfo.provider].push([modelId, modelInfo]);
+        const menuItems = flatten(byProvider('recommended'));
+        const advanced = flatten(byProvider('advanced'));
+        if (advanced.length > 0) {
+          menuItems.push({ type: 'separator' });
+          menuItems.push({ label: 'Advanced Models', submenu: advanced });
         }
 
-        // Add Anthropic models
-        for (const [modelId, modelInfo] of modelsByProvider.anthropic) {
-          menuItems.push({
-            label: modelInfo.name,
-            type: 'radio' as const,
-            checked: config.aiModel === modelId,
-            click: (): void => {
-              updateConfig({ aiModel: modelId });
-              tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-            },
-          });
-        }
-
-        // Add separator before OpenAI models
-        if (modelsByProvider.openai.length > 0) {
-          menuItems.push({ type: 'separator' as const });
-          for (const [modelId, modelInfo] of modelsByProvider.openai) {
-            menuItems.push({
-              label: modelInfo.name,
-              type: 'radio' as const,
-              checked: config.aiModel === modelId,
-              click: (): void => {
-                updateConfig({ aiModel: modelId });
-                tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-              },
-            });
-          }
-        }
-
-        // Add separator before Google models
-        if (modelsByProvider.google.length > 0) {
-          menuItems.push({ type: 'separator' as const });
-          for (const [modelId, modelInfo] of modelsByProvider.google) {
-            menuItems.push({
-              label: modelInfo.name,
-              type: 'radio' as const,
-              checked: config.aiModel === modelId,
-              click: (): void => {
-                updateConfig({ aiModel: modelId });
-                tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-              },
-            });
-          }
-        }
-
-        // Add separator before Custom Model
-        menuItems.push({ type: 'separator' as const });
+        menuItems.push({ type: 'separator' });
         menuItems.push({
           label: 'Custom Model',
-          type: 'radio' as const,
+          type: 'radio',
           checked: config.aiModel === CUSTOM_MODEL_ID,
-          click: (): void => {
-            updateConfig({ aiModel: CUSTOM_MODEL_ID });
-            tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-          },
+          click: (): void => select(CUSTOM_MODEL_ID),
         });
 
         return menuItems;

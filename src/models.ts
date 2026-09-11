@@ -5,7 +5,7 @@ export interface AIModelInfo {
 }
 
 export const AI_MODELS: Record<string, AIModelInfo> = {
-  // Anthropic Claude models (latest first, cost-efficient Sonnet as default)
+  // Anthropic Claude models (latest first; fast, cost-efficient Haiku is the default)
   'claude-5-sonnet': {
     provider: 'anthropic',
     name: 'Claude Sonnet 5',
@@ -100,5 +100,7 @@ export const AI_MODELS: Record<string, AIModelInfo> = {
   },
 };
 
-export const DEFAULT_AI_MODEL = Object.keys(AI_MODELS)[0] ?? 'claude-5-sonnet';
+// Haiku is the default: translation is a short, latency-sensitive task where a
+// fast small model is fully sufficient, so responses arrive noticeably sooner.
+export const DEFAULT_AI_MODEL = 'claude-4.5-haiku';
 export const CUSTOM_MODEL_ID = 'custom-model';

@@ -78,6 +78,7 @@ Search for the latest AI models and update the model list in this project.
 
 ## Notes
 
-- Default model should be cost-effective (Sonnet tier, not Opus)
+- Default model should be the fastest adequate tier (Haiku tier); translation does not need Sonnet/Opus-class models
+- Check `src/models-tier.ts` so new light models (haiku/mini/nano/flash) are classified as recommended and heavy ones (opus/fable/pro/flagship) as advanced
 - Update tests in `src/models.test.ts` if DEFAULT_AI_MODEL changes
 - Include sources in your response after updating

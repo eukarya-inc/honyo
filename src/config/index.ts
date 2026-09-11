@@ -74,7 +74,7 @@ function activeProfile(): Profile {
 
 export function initializeConfig(): void {
   const defaults = getDefaultConfig();
-  store = loadStoredConfig(defaults, envApiKeys);
+  store = loadStoredConfig(defaults);
 
   for (const profile of store.profiles) {
     // Check settings consistency

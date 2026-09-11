@@ -70,7 +70,7 @@ function readLegacyApiKeys(): Partial<ApiKeys> {
  * Load config.json, migrating a version-1 flat file (plus apikeys.json) into
  * the profile-based version-2 layout on first run. Returns decrypted data.
  */
-export function loadStoredConfig(defaults: Config, envKeys: Partial<ApiKeys>): StoredConfig {
+export function loadStoredConfig(defaults: Config): StoredConfig {
   let raw: Record<string, unknown> | null = null;
   try {
     if (existsSync(configPath)) {
@@ -86,7 +86,9 @@ export function loadStoredConfig(defaults: Config, envKeys: Partial<ApiKeys>): S
 
   // Version 1 (or no file): fold the flat config and the plaintext key file
   // into a single profile, persist as v2, and drop the plaintext key file.
-  const legacyKeys = { ...envKeys, ...readLegacyApiKeys() };
+  // Keys supplied via environment variables are NOT written to disk: they
+  // keep working as a runtime fallback (see getApiKeys in index.ts).
+  const legacyKeys = readLegacyApiKeys();
   const store = migrateLegacyConfig((raw ?? {}) as LegacyConfig, defaults, legacyKeys);
   if (raw || existsSync(legacyApiKeysPath)) {
     console.log('Migrating config to profile layout (v2)');

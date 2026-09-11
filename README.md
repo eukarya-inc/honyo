@@ -18,6 +18,8 @@
 - 🧭 **Language Direction Display** - See the detected source → target language at a glance
 - 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
 - 🎨 **Customizable** - Custom instructions (with AI assist), languages, and translation rules
+- 👤 **Profiles** - Keep separate sets of languages, models, prompts and API keys (personal, work, per-client) and switch from the tray
+- 🔐 **Encrypted keys & custom endpoints** - API keys are stored with the OS keychain; each provider can point at a gateway or proxy
 - 🪶 **Lightweight** - Minimal resource usage, lives in your system tray
 
 ## Installation
@@ -104,6 +106,28 @@ You can change these settings from the system tray menu:
 
 **Supported Languages (26):**
 English, Japanese, Chinese (Simplified), Chinese (Traditional), Korean, Spanish, French, German, Italian, Portuguese, Russian, Arabic, Hindi, Thai, Vietnamese, Indonesian, Malay, Filipino, Dutch, Polish, Turkish, Ukrainian, Swedish, Danish, Norwegian, Finnish
+
+### Profiles
+
+Everything about *what* and *how* you translate lives in a profile: primary/secondary
+languages, the AI model, custom model, custom prompt, custom languages, and the API keys and
+endpoints. Popup, display and startup settings are shared by all profiles.
+
+- Switch profiles from the tray menu (**Profile: …**) or the selector at the top-left of the
+  Settings window.
+- Use the pencil menu next to the selector to create, duplicate, rename or delete a profile.
+  Duplicating copies the API keys too, which is handy for "same keys, different prompt".
+- On first launch after updating, your existing settings become a profile named **Default**.
+
+### API keys and endpoints
+
+API keys are stored encrypted with the operating system's credential store (Keychain on
+macOS, DPAPI on Windows, libsecret on Linux) inside `config.json`; the old plaintext
+`apikeys.json` is migrated and removed. Environment variables (`ANTHROPIC_API_KEY`, etc.) still
+act as a fallback when a profile has no key.
+
+Each provider also accepts an optional **base URL** (Settings → API Keys → Endpoints) so
+requests can be routed through an LLM gateway or proxy instead of the provider's public API.
 
 ### Custom Instructions
 
@@ -280,7 +304,7 @@ npm start
 | `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
 | `HONYO_THEME_PLATFORM=win32\|linux` | Preview another OS's settings theme (Fluent / Adwaita) |
 | `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
-| `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB` and `HONYO_THEME=light\|dark`) |
+| `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB`, `HONYO_SETTINGS_SCREENSHOT_SCRIPT` to run JS first, and `HONYO_THEME=light\|dark`) |
 
 ### Project Structure
 

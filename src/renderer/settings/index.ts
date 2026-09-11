@@ -7,9 +7,9 @@
 // SettingsSnapshot, one element to settings.html, and the mapping in the main
 // process — nothing here needs to change.
 import { applyNativeTheme } from '../theme.ts';
-import type { SettingsPatch, SettingsSnapshot } from '../../ipc/settings.ts';
+import type { ProfileSummary, SettingsPatch, SettingsSnapshot } from '../../ipc/settings.ts';
 
-type FieldKey = keyof SettingsSnapshot;
+type FieldKey = keyof SettingsPatch;
 type FieldValue = SettingsSnapshot[FieldKey];
 
 // Minimal typings for the Xel widgets we bind to.
@@ -21,6 +21,9 @@ interface XToggleElement extends HTMLElement {
 }
 interface XNotificationElement extends HTMLElement {
   opened: boolean;
+}
+interface XButtonElement extends HTMLElement {
+  disabled: boolean;
 }
 
 applyNativeTheme(window.honyo.platform);
@@ -84,6 +87,10 @@ function collectPatch(): SettingsPatch {
   return patch;
 }
 
+function hasUnsavedChanges(): boolean {
+  return Object.keys(collectPatch()).length > 0;
+}
+
 function notify(message: string, isError = false): void {
   const note = $<XNotificationElement>('#status');
   note.textContent = message;
@@ -92,15 +99,134 @@ function notify(message: string, isError = false): void {
   note.opened = true;
 }
 
+// --- Profiles ------------------------------------------------------------------
+
+function renderProfileMenu(profiles: ProfileSummary[], activeId: string): void {
+  const menu = $('#profile-menu');
+  menu.replaceChildren(
+    ...profiles.map(p => {
+      const item = document.createElement('x-menuitem');
+      item.setAttribute('value', p.id);
+      if (p.id === activeId) item.setAttribute('toggled', '');
+      const label = document.createElement('x-label');
+      label.textContent = p.name;
+      item.append(label);
+      return item;
+    }),
+  );
+  $<XValueElement>('#profile-select').value = activeId;
+  $<XButtonElement>('#profile-delete').disabled = profiles.length <= 1;
+}
+
+type ProfileDialogMode = 'create' | 'duplicate' | 'rename';
+
+function openProfileDialog(mode: ProfileDialogMode): void {
+  if (!loaded) return;
+  const dialog = $<HTMLDialogElement>('#profile-dialog');
+  const input = $<XValueElement>('#profile-name-input');
+  const active = loaded.profiles.find(p => p.id === loaded?.activeProfileId);
+  const titles: Record<ProfileDialogMode, string> = {
+    create: 'New profile',
+    duplicate: 'Duplicate profile',
+    rename: 'Rename profile',
+  };
+  $('#profile-dialog-title').textContent = titles[mode];
+  input.value =
+    mode === 'rename'
+      ? (active?.name ?? '')
+      : mode === 'duplicate'
+        ? `${active?.name ?? ''} copy`
+        : '';
+  dialog.dataset.mode = mode;
+  dialog.showModal();
+}
+
+async function submitProfileDialog(): Promise<void> {
+  if (!loaded) return;
+  const dialog = $<HTMLDialogElement>('#profile-dialog');
+  const mode = dialog.dataset.mode as ProfileDialogMode;
+  const name = String($<XValueElement>('#profile-name-input').value ?? '').trim();
+  if (!name) {
+    notify('Please enter a profile name.', true);
+    return;
+  }
+  if (mode === 'rename') {
+    await window.honyo.renameProfile(loaded.activeProfileId, name);
+  } else {
+    await window.honyo.createProfile({
+      name,
+      ...(mode === 'duplicate' ? { duplicateFrom: loaded.activeProfileId } : {}),
+    });
+  }
+  dialog.close();
+  await loadIntoForm();
+  notify(mode === 'rename' ? 'Profile renamed' : `Profile "${name}" is now active`);
+}
+
+async function switchProfile(id: string): Promise<void> {
+  if (!loaded || id === loaded.activeProfileId) return;
+  if (hasUnsavedChanges()) {
+    // Keep it simple: save pending edits to the old profile before switching.
+    await window.honyo.save(collectPatch());
+  }
+  await window.honyo.selectProfile(id);
+  await loadIntoForm();
+  notify(`Switched to "${loaded?.profiles.find(p => p.id === id)?.name ?? ''}"`);
+}
+
+function setupProfiles(): void {
+  const select = $<XValueElement>('#profile-select');
+  select.addEventListener('change', () => {
+    void switchProfile(String(select.value ?? ''));
+  });
+
+  $('#profile-new').addEventListener('click', () => openProfileDialog('create'));
+  $('#profile-duplicate').addEventListener('click', () => openProfileDialog('duplicate'));
+  $('#profile-rename').addEventListener('click', () => openProfileDialog('rename'));
+  $('#profile-delete').addEventListener('click', () => {
+    if (!loaded) return;
+    const active = loaded.profiles.find(p => p.id === loaded?.activeProfileId);
+    $('#profile-delete-name').textContent = active?.name ?? '';
+    $<HTMLDialogElement>('#profile-delete-dialog').showModal();
+  });
+
+  $('#profile-dialog-cancel').addEventListener('click', () =>
+    $<HTMLDialogElement>('#profile-dialog').close(),
+  );
+  $('#profile-dialog-ok').addEventListener('click', () => void submitProfileDialog());
+  $('#profile-name-input').addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Enter') void submitProfileDialog();
+  });
+
+  $('#profile-delete-cancel').addEventListener('click', () =>
+    $<HTMLDialogElement>('#profile-delete-dialog').close(),
+  );
+  $('#profile-delete-ok').addEventListener('click', () => {
+    void (async (): Promise<void> => {
+      if (!loaded) return;
+      const ok = await window.honyo.deleteProfile(loaded.activeProfileId);
+      $<HTMLDialogElement>('#profile-delete-dialog').close();
+      await loadIntoForm();
+      notify(ok ? 'Profile deleted' : 'The last profile cannot be deleted', !ok);
+    })();
+  });
+
+  // The tray menu can switch profiles while this window is open.
+  window.honyo.onProfilesChanged(() => void loadIntoForm());
+}
+
+// --- Form ----------------------------------------------------------------------
+
 async function loadIntoForm(): Promise<void> {
   loaded = await window.honyo.load();
   for (const [key, el] of fields) {
     writeField(el, loaded[key]);
   }
+  renderProfileMenu(loaded.profiles, loaded.activeProfileId);
 }
 
 async function saveAll(): Promise<void> {
-  const button = $<HTMLElement & { disabled: boolean }>('#save-button');
+  const button = $<XButtonElement>('#save-button');
   const patch = collectPatch();
   if (Object.keys(patch).length === 0) {
     notify('No changes to save');
@@ -140,8 +266,8 @@ function setupExternalLinks(): void {
 function setupGenerateDialog(): void {
   const dialog = $<HTMLDialogElement>('#generate-dialog');
   const instruction = $<XValueElement>('#generate-instruction');
-  const generateButton = $<HTMLElement & { disabled: boolean }>('#generate-button');
-  const openButton = $<HTMLElement & { disabled: boolean }>('#open-generate-button');
+  const generateButton = $<XButtonElement>('#generate-button');
+  const openButton = $<XButtonElement>('#open-generate-button');
   const promptField = fields.get('customPrompt') as XValueElement;
 
   openButton.addEventListener('click', () => {
@@ -200,6 +326,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupExternalLinks();
   setupGenerateDialog();
   setupImmediateSaves();
+  setupProfiles();
   $('#save-button').addEventListener('click', () => void saveAll());
   document.addEventListener('keydown', event => {
     if ((event.metaKey || event.ctrlKey) && event.key === 's') {

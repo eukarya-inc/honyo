@@ -9,6 +9,14 @@ import {
   getConfig,
   updateConfig,
   clearPopupSize,
+  getProviderSettings,
+  updateProviderBaseUrls,
+  listProfiles,
+  getActiveProfileId,
+  setActiveProfile,
+  createProfile,
+  renameProfile,
+  deleteProfile,
   type Config,
 } from '../config/index.ts';
 import { resetPopupSize } from './popup.ts';
@@ -17,8 +25,11 @@ import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo, refreshModels } from '../models-remote.ts';
 import {
   SETTINGS_CHANNELS,
+  SETTINGS_EVENTS,
+  type CreateProfileRequest,
   type GeneratePromptRequest,
   type GeneratePromptResult,
+  type ProfileSummary,
   type SettingsPatch,
   type SettingsSnapshot,
 } from '../ipc/settings.ts';
@@ -93,6 +104,13 @@ export function openSettingsWindow(): void {
     settingsWindow.webContents.once('did-finish-load', () => {
       setTimeout(() => {
         void (async (): Promise<void> => {
+          // HONYO_SETTINGS_SCREENSHOT_SCRIPT runs arbitrary JS in the page
+          // first (e.g. to exercise the profile API before capturing).
+          const script = process.env.HONYO_SETTINGS_SCREENSHOT_SCRIPT;
+          if (script) {
+            await settingsWindow?.webContents.executeJavaScript(script);
+            await new Promise(r => setTimeout(r, 500));
+          }
           if (tab) {
             await settingsWindow?.webContents.executeJavaScript(
               `document.querySelector('#tabs').value = ${JSON.stringify(tab)};
@@ -113,15 +131,28 @@ export function openSettingsWindow(): void {
   });
 }
 
+/** Tell an open settings window that profiles changed elsewhere (tray menu). */
+export function notifySettingsProfilesChanged(): void {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.webContents.send(SETTINGS_EVENTS.profilesChanged);
+  }
+}
+
 // --- Snapshot mapping ----------------------------------------------------
 
 function snapshot(): SettingsSnapshot {
   const config = getConfig();
   const keys = getApiKeys();
+  const providers = getProviderSettings();
   return {
+    profiles: listProfiles(),
+    activeProfileId: getActiveProfileId(),
     anthropicKey: keys.anthropic ?? '',
     openaiKey: keys.openai ?? '',
     googleKey: keys.google ?? '',
+    anthropicBaseUrl: providers.anthropic.baseUrl ?? '',
+    openaiBaseUrl: providers.openai.baseUrl ?? '',
+    googleBaseUrl: providers.google.baseUrl ?? '',
     customPrompt: config.customPrompt ?? '',
     customModelName: config.customModel?.model ?? '',
     customModelProvider: config.customModel?.provider ?? '',
@@ -139,6 +170,12 @@ function applyPatch(patch: SettingsPatch): void {
   if (patch.openaiKey !== undefined) keyUpdates.openai = patch.openaiKey.trim();
   if (patch.googleKey !== undefined) keyUpdates.google = patch.googleKey.trim();
   if (Object.keys(keyUpdates).length > 0) updateApiKeys(keyUpdates);
+
+  const baseUrls: Partial<{ anthropic: string; openai: string; google: string }> = {};
+  if (patch.anthropicBaseUrl !== undefined) baseUrls.anthropic = patch.anthropicBaseUrl;
+  if (patch.openaiBaseUrl !== undefined) baseUrls.openai = patch.openaiBaseUrl;
+  if (patch.googleBaseUrl !== undefined) baseUrls.google = patch.googleBaseUrl;
+  if (Object.keys(baseUrls).length > 0) updateProviderBaseUrls(baseUrls);
 
   const updates: Partial<Config> = {};
   if (patch.customPrompt !== undefined) updates.customPrompt = patch.customPrompt.trim();
@@ -186,7 +223,7 @@ async function generateCustomPrompt(data: GeneratePromptRequest): Promise<Genera
     }
     if (!apiKey) return { success: false, error: 'API key not configured' };
 
-    const model = getAIProvider(config.aiModel, apiKeys, config.customModel);
+    const model = getAIProvider(config.aiModel, apiKeys, config.customModel, getProviderSettings());
 
     const systemPrompt = `You are an expert at writing translation instruction prompts.
 Your task is to generate or modify a custom prompt that will be used to guide AI translations.
@@ -233,4 +270,22 @@ export function setupSettingsIPC(): void {
   ipcMain.handle(SETTINGS_CHANNELS.openExternal, async (_event, url: string): Promise<void> => {
     if (/^https?:\/\//.test(url)) await shell.openExternal(url);
   });
+
+  ipcMain.handle(SETTINGS_CHANNELS.profileSelect, (_event, id: string): void => {
+    setActiveProfile(id);
+  });
+
+  ipcMain.handle(
+    SETTINGS_CHANNELS.profileCreate,
+    (_event, request: CreateProfileRequest): ProfileSummary =>
+      createProfile(request.name, request.duplicateFrom),
+  );
+
+  ipcMain.handle(SETTINGS_CHANNELS.profileRename, (_event, id: string, name: string): void => {
+    renameProfile(id, name);
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.profileDelete, (_event, id: string): boolean =>
+    deleteProfile(id),
+  );
 }

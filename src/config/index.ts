@@ -4,23 +4,34 @@ import { DEFAULT_MODEL_KEY, CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
 import { getLanguageFromLocale } from '../language/index.ts';
 import { LANGUAGES } from '../language/constants.ts';
+import { loadStoredConfig, saveStoredConfig } from './storage.ts';
 import {
-  loadConfigFromFile,
-  saveConfigToFile,
-  loadApiKeysFromFile,
-  saveApiKeysToFile,
-} from './storage.ts';
-import type { ApiKeys, Config } from './types.ts';
+  buildProfile,
+  duplicateProfile,
+  pickProfileDefaults,
+  splitUpdates,
+  toFlatConfig,
+  uniqueProfileName,
+  PROVIDER_IDS,
+} from './profiles.ts';
+import type {
+  ApiKeys,
+  Config,
+  Profile,
+  ProviderId,
+  ProviderSettings,
+  StoredConfig,
+} from './types.ts';
 
 loadEnv();
 
 // Global state
-let config: Config;
-let apiKeys: ApiKeys;
+let store: StoredConfig;
 let isPaused = false;
+let profileChangedCallback: (() => void) | null = null;
 
-// Initialize API keys from environment
-const defaultApiKeys: ApiKeys = {
+// API keys from the environment act as a fallback when a profile has none.
+const envApiKeys: ApiKeys = {
   anthropic: process.env.ANTHROPIC_API_KEY || '',
   openai: process.env.OPENAI_API_KEY || '',
   google: process.env.GOOGLE_API_KEY || '',
@@ -51,91 +62,175 @@ function getDefaultConfig(): Config {
   };
 }
 
+function activeProfile(): Profile {
+  const found = store.profiles.find(p => p.id === store.activeProfileId);
+  if (found) return found;
+  // normalizeStore guarantees a profile exists; fall back defensively.
+  const first = store.profiles[0];
+  if (!first) throw new Error('No profiles configured');
+  store.activeProfileId = first.id;
+  return first;
+}
+
 export function initializeConfig(): void {
-  const defaultConfig = getDefaultConfig();
-  config = loadConfigFromFile(defaultConfig);
+  const defaults = getDefaultConfig();
+  store = loadStoredConfig(defaults, envApiKeys);
 
-  // Check settings consistency
-  if (config.targetLanguage === config.secondaryLanguage) {
-    // If same language, reapply default settings
-    const newDefaultConfig = getDefaultConfig();
-    config.secondaryLanguage = newDefaultConfig.secondaryLanguage;
+  for (const profile of store.profiles) {
+    // Check settings consistency
+    if (profile.targetLanguage === profile.secondaryLanguage) {
+      profile.secondaryLanguage = defaults.secondaryLanguage;
+    }
+    // Validate AI model exists (custom model is always allowed)
+    if (profile.aiModel !== CUSTOM_MODEL_ID && !getModelInfo(profile.aiModel)) {
+      console.log(`Invalid AI model in profile "${profile.name}": ${profile.aiModel}, resetting`);
+      profile.aiModel = DEFAULT_MODEL_KEY;
+    }
+    if (profile.customPrompt === undefined) profile.customPrompt = '';
   }
 
-  // Validate AI model exists (custom model is always allowed)
-  if (config.aiModel !== CUSTOM_MODEL_ID && !getModelInfo(config.aiModel)) {
-    console.log(`Invalid AI model: ${config.aiModel}, resetting to default`);
-    config.aiModel = DEFAULT_MODEL_KEY;
-  }
-
-  // Initialize custom prompt if not present
-  if (config.customPrompt === undefined) {
-    config.customPrompt = '';
-  }
-
-  // Initialize display mode if not present
-  if (config.displayMode === undefined) {
-    config.displayMode = 'notification';
-  }
-
-  // Initialize autoCloseOnBlur if not present
-  if (config.autoCloseOnBlur === undefined) {
-    config.autoCloseOnBlur = true;
-  }
-
-  // Initialize enableStreaming if not present
-  if (config.enableStreaming === undefined) {
-    config.enableStreaming = true;
-  }
-
-  // Initialize popupFontSize if not present
-  if (config.popupFontSize === undefined) {
-    config.popupFontSize = 14;
-  }
-
-  // Restore isPaused state
-  if (typeof config.isPaused === 'boolean') {
-    isPaused = config.isPaused;
-  }
-
-  // Load API keys
-  apiKeys = loadApiKeysFromFile(defaultApiKeys);
+  store.displayMode ??= 'notification';
+  store.autoCloseOnBlur ??= true;
+  store.enableStreaming ??= true;
+  store.popupFontSize ??= 14;
+  isPaused = store.isPaused === true;
 }
 
+/** Flat view: global settings merged with the active profile. */
 export function getConfig(): Config {
-  return config;
+  return { ...toFlatConfig(store, activeProfile()), isPaused };
 }
 
+/** Update flat settings; profile-scoped keys go to the active profile. */
 export function updateConfig(updates: Partial<Config>): void {
-  config = { ...config, ...updates };
+  const { profile, global } = splitUpdates(updates);
+  Object.assign(activeProfile(), profile);
+  Object.assign(store, global);
   saveConfig();
 }
 
 // Clear the persisted popup size so the next popup uses the default 400x200.
 export function clearPopupSize(): void {
-  delete config.popupSize;
+  delete store.popupSize;
   saveConfig();
 }
 
 export function clearSkippedUpdateVersion(): void {
-  if (config.skippedUpdateVersion) {
-    delete config.skippedUpdateVersion;
+  if (store.skippedUpdateVersion) {
+    delete store.skippedUpdateVersion;
     saveConfig();
   }
 }
 
 export function saveConfig(): void {
-  saveConfigToFile(config, isPaused);
+  store.isPaused = isPaused;
+  saveStoredConfig(store);
 }
 
+// --- Providers (active profile) -------------------------------------------------
+
 export function getApiKeys(): ApiKeys {
-  return apiKeys;
+  const providers = activeProfile().providers;
+  return {
+    anthropic: providers.anthropic.apiKey || envApiKeys.anthropic,
+    openai: providers.openai.apiKey || envApiKeys.openai,
+    google: providers.google.apiKey || envApiKeys.google,
+  };
 }
 
 export function updateApiKeys(updates: Partial<ApiKeys>): void {
-  apiKeys = { ...apiKeys, ...updates };
-  saveApiKeysToFile(apiKeys);
+  const providers = activeProfile().providers;
+  for (const id of PROVIDER_IDS) {
+    const value = updates[id];
+    if (value !== undefined) providers[id] = { ...providers[id], apiKey: value };
+  }
+  saveConfig();
 }
+
+export function getProviderSettings(): Record<ProviderId, ProviderSettings> {
+  return structuredClone(activeProfile().providers);
+}
+
+export function updateProviderBaseUrls(updates: Partial<Record<ProviderId, string>>): void {
+  const providers = activeProfile().providers;
+  for (const id of PROVIDER_IDS) {
+    const value = updates[id];
+    if (value === undefined) continue;
+    const trimmed = value.trim();
+    providers[id] = trimmed
+      ? { ...providers[id], baseUrl: trimmed }
+      : { apiKey: providers[id].apiKey };
+  }
+  saveConfig();
+}
+
+// --- Profiles ---------------------------------------------------------------------
+
+export interface ProfileSummary {
+  id: string;
+  name: string;
+}
+
+export function listProfiles(): ProfileSummary[] {
+  return store.profiles.map(p => ({ id: p.id, name: p.name }));
+}
+
+export function getActiveProfileId(): string {
+  return activeProfile().id;
+}
+
+/** Called after the active profile or the profile list changes (tray rebuild). */
+export function setProfileChangedCallback(callback: () => void): void {
+  profileChangedCallback = callback;
+}
+
+function profilesChanged(): void {
+  saveConfig();
+  profileChangedCallback?.();
+}
+
+export function setActiveProfile(id: string): boolean {
+  if (!store.profiles.some(p => p.id === id) || id === store.activeProfileId) return false;
+  store.activeProfileId = id;
+  profilesChanged();
+  return true;
+}
+
+/** Create a profile with default settings (or a copy of `duplicateFrom`) and activate it. */
+export function createProfile(name: string, duplicateFrom?: string): ProfileSummary {
+  const finalName = uniqueProfileName(name, store.profiles);
+  const source = duplicateFrom ? store.profiles.find(p => p.id === duplicateFrom) : undefined;
+  const profile = source
+    ? duplicateProfile(source, finalName)
+    : buildProfile(finalName, pickProfileDefaults(getDefaultConfig()));
+  store.profiles.push(profile);
+  store.activeProfileId = profile.id;
+  profilesChanged();
+  return { id: profile.id, name: profile.name };
+}
+
+export function renameProfile(id: string, name: string): boolean {
+  const profile = store.profiles.find(p => p.id === id);
+  if (!profile) return false;
+  profile.name = uniqueProfileName(name, store.profiles, id);
+  profilesChanged();
+  return true;
+}
+
+/** Delete a profile; the last remaining profile cannot be deleted. */
+export function deleteProfile(id: string): boolean {
+  if (store.profiles.length <= 1) return false;
+  const index = store.profiles.findIndex(p => p.id === id);
+  if (index < 0) return false;
+  store.profiles.splice(index, 1);
+  if (store.activeProfileId === id) {
+    store.activeProfileId = store.profiles[Math.max(0, index - 1)]?.id ?? '';
+  }
+  profilesChanged();
+  return true;
+}
+
+// --- Pause --------------------------------------------------------------------------
 
 export function getPausedState(): boolean {
   return isPaused;
@@ -146,4 +241,4 @@ export function setPausedState(paused: boolean): void {
   saveConfig();
 }
 
-export type { ApiKeys, Config, DisplayMode, CustomModel } from './types';
+export type { ApiKeys, Config, DisplayMode, CustomModel, ProviderId } from './types.ts';

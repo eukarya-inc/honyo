@@ -40,6 +40,34 @@
       body header.toolbar x-button {
         -webkit-app-region: no-drag;
       }
+      body header.toolbar .profile-bar {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        -webkit-app-region: no-drag;
+      }
+      body header.toolbar #profile-select {
+        max-width: 160px;
+      }
+      html[data-platform='darwin'] body header.toolbar .profile-bar {
+        left: 84px;
+      }
+      body .footnote {
+        margin: 10px 4px 0;
+        font-size: 0.85em;
+        opacity: 0.6;
+      }
+      body dialog x-input {
+        width: 100%;
+        max-width: none;
+      }
+      body dialog p {
+        margin: 0 0 12px;
+      }
       body header.toolbar #save-button {
         position: absolute;
         right: 14px;
@@ -51,6 +79,14 @@
         padding-left: 84px;
         padding-right: 84px;
         min-height: 52px;
+      }
+      /* Leave room for the profile controls on the left and Save on the right. */
+      body header.toolbar {
+        padding-left: 240px;
+        padding-right: 100px;
+      }
+      html[data-platform='darwin'] body header.toolbar {
+        padding-left: 300px;
       }
       body main {
         flex: 1;
@@ -154,6 +190,21 @@
   </head>
   <body>
     <header class="toolbar">
+      <div class="profile-bar">
+        <x-select id="profile-select" size="small">
+          <x-menu id="profile-menu"></x-menu>
+        </x-select>
+        <x-button size="small" skin="flat" id="profile-actions">
+          <x-icon href="#edit"></x-icon>
+          <x-menu>
+            <x-menuitem id="profile-new"><x-label>New Profile…</x-label></x-menuitem>
+            <x-menuitem id="profile-duplicate"><x-label>Duplicate…</x-label></x-menuitem>
+            <x-menuitem id="profile-rename"><x-label>Rename…</x-label></x-menuitem>
+            <hr />
+            <x-menuitem id="profile-delete"><x-label>Delete</x-label></x-menuitem>
+          </x-menu>
+        </x-button>
+      </div>
       <x-tabs id="tabs">
         <x-tab value="api-keys" toggled><x-label>API Keys</x-label></x-tab>
         <x-tab value="customization"><x-label>Customization</x-label></x-tab>
@@ -196,6 +247,39 @@
             <x-input type="password" data-field="googleKey"><x-label>AIzaSy…</x-label></x-input>
           </div>
         </div>
+
+        <span class="group-title">Endpoints</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Claude base URL</x-label>
+              <span class="hint">Optional. Route requests through a gateway or proxy.</span>
+            </div>
+            <x-input data-field="anthropicBaseUrl"
+              ><x-label>https://api.anthropic.com/v1</x-label></x-input
+            >
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>OpenAI base URL</x-label>
+            </div>
+            <x-input data-field="openaiBaseUrl"
+              ><x-label>https://api.openai.com/v1</x-label></x-input
+            >
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Google AI base URL</x-label>
+            </div>
+            <x-input data-field="googleBaseUrl"
+              ><x-label>https://generativelanguage.googleapis.com/v1beta</x-label></x-input
+            >
+          </div>
+        </div>
+        <span class="hint footnote">
+          API keys, endpoints, languages, model and prompt belong to the selected profile. Popup and
+          startup settings are shared.
+        </span>
       </section>
 
       <section data-panel="customization" hidden>
@@ -310,6 +394,24 @@
     </main>
 
     <x-notification id="status" timeout="3000"></x-notification>
+
+    <dialog id="profile-dialog">
+      <h3 id="profile-dialog-title">New profile</h3>
+      <x-input id="profile-name-input"><x-label>Profile name</x-label></x-input>
+      <footer>
+        <x-button id="profile-dialog-cancel"><x-label>Cancel</x-label></x-button>
+        <x-button id="profile-dialog-ok" toggled><x-label>OK</x-label></x-button>
+      </footer>
+    </dialog>
+
+    <dialog id="profile-delete-dialog">
+      <h3>Delete profile?</h3>
+      <p>"<span id="profile-delete-name"></span>" and its API keys will be removed.</p>
+      <footer>
+        <x-button id="profile-delete-cancel"><x-label>Cancel</x-label></x-button>
+        <x-button id="profile-delete-ok" toggled><x-label>Delete</x-label></x-button>
+      </footer>
+    </dialog>
 
     <dialog id="generate-dialog">
       <h3>Generate custom prompt with AI</h3>

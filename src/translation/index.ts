@@ -5,7 +5,7 @@ import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
 import { languages } from '../language/constants.ts';
 import { getAIProvider } from './providers.ts';
-import { getConfig, getApiKeys } from '../config/index.ts';
+import { getConfig, getApiKeys, getProviderSettings } from '../config/index.ts';
 import type { Config, ApiKeys } from '../config/types.ts';
 import { parseTranslationOutput, isHeaderResolvable, type ParsedTranslation } from './parse.ts';
 import { detectScriptHint } from './script-hint.ts';
@@ -89,7 +89,7 @@ function validateApiKey(config: Config, apiKeys: ApiKeys): { valid: boolean; err
 }
 
 function getModel(config: Config, apiKeys: ApiKeys): LanguageModel {
-  return getAIProvider(config.aiModel, apiKeys, config.customModel);
+  return getAIProvider(config.aiModel, apiKeys, config.customModel, getProviderSettings());
 }
 
 // Thrown by translateTextStrict when API-key/model validation fails (the

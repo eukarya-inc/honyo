@@ -1,3 +1,5 @@
+export type ProviderId = 'anthropic' | 'openai' | 'google';
+
 export interface ApiKeys {
   anthropic: string;
   openai: string;
@@ -8,26 +10,60 @@ export type DisplayMode = 'notification' | 'popup';
 
 export interface CustomModel {
   model: string;
-  provider: 'anthropic' | 'openai' | 'google';
+  provider: ProviderId;
 }
 
-export interface Config {
+/** Per-provider connection settings. `baseUrl` targets a gateway or proxy. */
+export interface ProviderSettings {
+  apiKey: string;
+  baseUrl?: string;
+}
+
+/**
+ * Settings that belong to a profile: everything about *what* and *how* to
+ * translate. Switching profiles swaps all of these at once.
+ */
+export interface ProfileSettings {
   targetLanguage: string;
   secondaryLanguage: string;
-  isPaused: boolean;
   aiModel: string;
-  autoCloseOnBlur?: boolean;
-  customPrompt: string;
-  displayMode: DisplayMode;
   customModel?: CustomModel;
+  customPrompt: string;
   customLanguages?: string[];
-  skippedUpdateVersion?: string;
+  providers: Record<ProviderId, ProviderSettings>;
+}
+
+export interface Profile extends ProfileSettings {
+  id: string;
+  name: string;
+}
+
+/** Settings shared by all profiles: app behaviour and window state. */
+export interface GlobalSettings {
+  isPaused: boolean;
+  autoCloseOnBlur?: boolean;
   enableStreaming?: boolean;
+  displayMode: DisplayMode;
   openAtLogin?: boolean;
   popupFontSize?: number;
   popupSize?: { width: number; height: number };
+  skippedUpdateVersion?: string;
 }
 
-export interface SavedConfig extends Config {
-  fallbackLanguage?: string; // For migration
+/** On-disk shape of config.json (version 2). API keys are stored encrypted. */
+export interface StoredConfig extends GlobalSettings {
+  version: 2;
+  activeProfileId: string;
+  profiles: Profile[];
+}
+
+/**
+ * The flat view most of the app reads: global settings merged with the active
+ * profile (minus provider secrets, which are read via getApiKeys()).
+ */
+export interface Config extends GlobalSettings, Omit<ProfileSettings, 'providers'> {}
+
+/** Pre-profile (version 1) config.json shape, kept for migration. */
+export interface LegacyConfig extends Partial<Config> {
+  fallbackLanguage?: string;
 }

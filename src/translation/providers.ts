@@ -4,12 +4,21 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { LanguageModel } from 'ai';
 import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
-import type { ApiKeys, CustomModel } from '../config/types.ts';
+import type { ApiKeys, CustomModel, ProviderId, ProviderSettings } from '../config/types.ts';
+
+type BaseUrls = Partial<Record<ProviderId, Pick<ProviderSettings, 'baseUrl'>>>;
+
+// Optional custom endpoint (gateway/proxy) per provider.
+function baseURL(baseUrls: BaseUrls | undefined, provider: ProviderId): { baseURL?: string } {
+  const url = baseUrls?.[provider]?.baseUrl;
+  return url ? { baseURL: url } : {};
+}
 
 export function getAIProvider(
   modelId: string,
   apiKeys: ApiKeys,
   customModel?: CustomModel,
+  baseUrls?: BaseUrls,
 ): LanguageModel {
   if (modelId === CUSTOM_MODEL_ID) {
     if (!customModel || !customModel.model || !customModel.provider) {
@@ -21,13 +30,14 @@ export function getAIProvider(
       throw new Error(`No API key configured for ${customModel.provider}`);
     }
 
-    switch (customModel.provider) {
+    const p = customModel.provider;
+    switch (p) {
       case 'anthropic':
-        return createAnthropic({ apiKey })(customModel.model);
+        return createAnthropic({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
       case 'openai':
-        return createOpenAI({ apiKey })(customModel.model);
+        return createOpenAI({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
       case 'google':
-        return createGoogleGenerativeAI({ apiKey })(customModel.model);
+        return createGoogleGenerativeAI({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
     }
 
     throw new Error('Unknown provider');
@@ -43,13 +53,14 @@ export function getAIProvider(
     throw new Error(`No API key configured for ${modelInfo.provider}`);
   }
 
-  switch (modelInfo.provider) {
+  const p = modelInfo.provider;
+  switch (p) {
     case 'anthropic':
-      return createAnthropic({ apiKey })(modelInfo.model);
+      return createAnthropic({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
     case 'openai':
-      return createOpenAI({ apiKey })(modelInfo.model);
+      return createOpenAI({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
     case 'google':
-      return createGoogleGenerativeAI({ apiKey })(modelInfo.model);
+      return createGoogleGenerativeAI({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
   }
 
   throw new Error('Unknown provider');

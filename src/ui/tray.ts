@@ -3,6 +3,8 @@ import { createNormalIcon, createTranslatingIcon } from './icons.ts';
 import { createTrayMenu } from './menu.ts';
 import { setMenuUpdateCallback } from '../app/updater.ts';
 import { setModelsChangedCallback } from '../models-remote.ts';
+import { setProfileChangedCallback } from '../config/index.ts';
+import { notifySettingsProfilesChanged } from './settings.ts';
 
 let tray: Tray | null = null;
 let normalIcon: Electron.NativeImage | null = null;
@@ -31,6 +33,12 @@ export function createTray(): Tray {
 
   // Rebuild the menu when the fetched model list changes
   setModelsChangedCallback(updateMenu);
+
+  // Rebuild the menu (and refresh an open settings window) on profile changes
+  setProfileChangedCallback(() => {
+    updateMenu();
+    notifySettingsProfilesChanged();
+  });
 
   // Create initial menu
   updateMenu();

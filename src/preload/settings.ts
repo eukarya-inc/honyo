@@ -3,6 +3,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   SETTINGS_CHANNELS,
+  SETTINGS_EVENTS,
+  type CreateProfileRequest,
   type HonyoSettingsApi,
   type SettingsPatch,
   type GeneratePromptRequest,
@@ -17,6 +19,15 @@ const api: HonyoSettingsApi = {
   generatePrompt: (request: GeneratePromptRequest) =>
     ipcRenderer.invoke(SETTINGS_CHANNELS.generatePrompt, request),
   openExternal: (url: string) => ipcRenderer.invoke(SETTINGS_CHANNELS.openExternal, url),
+  selectProfile: (id: string) => ipcRenderer.invoke(SETTINGS_CHANNELS.profileSelect, id),
+  createProfile: (request: CreateProfileRequest) =>
+    ipcRenderer.invoke(SETTINGS_CHANNELS.profileCreate, request),
+  renameProfile: (id: string, name: string) =>
+    ipcRenderer.invoke(SETTINGS_CHANNELS.profileRename, id, name),
+  deleteProfile: (id: string) => ipcRenderer.invoke(SETTINGS_CHANNELS.profileDelete, id),
+  onProfilesChanged: (handler: () => void) => {
+    ipcRenderer.on(SETTINGS_EVENTS.profilesChanged, () => handler());
+  },
 };
 
 contextBridge.exposeInMainWorld('honyo', api);

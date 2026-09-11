@@ -8,7 +8,15 @@ import { languages } from '../language/index.ts';
 import { CUSTOM_MODEL_ID, DEFAULT_MODEL_KEY, type AIModelInfo } from '../models.ts';
 import { getAvailableModels, getModelInfo, getDefaultModelKey } from '../models-remote.ts';
 import { classifyModelTier, type ModelTier } from '../models-tier.ts';
-import { getConfig, updateConfig, getPausedState, setPausedState } from '../config/index.ts';
+import {
+  getConfig,
+  updateConfig,
+  getPausedState,
+  setPausedState,
+  listProfiles,
+  getActiveProfileId,
+  setActiveProfile,
+} from '../config/index.ts';
 import { openSettingsWindow } from './settings.ts';
 import {
   checkForUpdates,
@@ -59,6 +67,28 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
       enabled: false,
     },
     { type: 'separator' },
+    {
+      label: `Profile: ${listProfiles().find(p => p.id === getActiveProfileId())?.name ?? ''}`,
+      submenu: [
+        ...listProfiles().map(profile => ({
+          label: profile.name,
+          type: 'radio' as const,
+          checked: profile.id === getActiveProfileId(),
+          click: (): void => {
+            // setActiveProfile triggers the profile-changed callback, which
+            // rebuilds this menu with the new languages/model.
+            setActiveProfile(profile.id);
+          },
+        })),
+        { type: 'separator' as const },
+        {
+          label: 'Manage Profiles…',
+          click: (): void => {
+            openSettingsWindow();
+          },
+        },
+      ],
+    },
     {
       label: `Primary: ${config.targetLanguage}`,
       submenu: allLanguages.map(lang => ({

@@ -7,7 +7,11 @@ export type ProviderId = 'anthropic' | 'openai' | 'google';
 export interface ProfileSummary {
   id: string;
   name: string;
+  shortcut?: string;
 }
+
+export type TranslateTrigger = 'double-copy' | 'shortcut';
+export type TranslateSource = 'copy-selection' | 'clipboard';
 
 export type ModelOptionGroup =
   | 'default'
@@ -40,7 +44,12 @@ export interface SettingsSnapshot {
   targetLanguage: string;
   secondaryLanguage: string;
   aiModel: string;
+  /** Global shortcut that activates the active profile ("" for none). */
+  profileShortcut: string;
   displayMode: DisplayMode;
+  translateTrigger: TranslateTrigger;
+  translateShortcut: string;
+  translateSource: TranslateSource;
   anthropicKey: string;
   openaiKey: string;
   googleKey: string;

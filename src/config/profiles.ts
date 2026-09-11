@@ -22,6 +22,7 @@ const PROFILE_KEYS = [
   'customModel',
   'customPrompt',
   'customLanguages',
+  'shortcut',
 ] as const satisfies ReadonlyArray<keyof Omit<ProfileSettings, 'providers'>>;
 
 type ProfileKey = (typeof PROFILE_KEYS)[number];

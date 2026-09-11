@@ -3,10 +3,19 @@ import { createNormalIcon, createTranslatingIcon } from './icons.ts';
 import { createTrayMenu } from './menu.ts';
 import { setMenuUpdateCallback } from '../app/updater.ts';
 import { setModelsChangedCallback } from '../models-remote.ts';
-import { setProfileChangedCallback } from '../config/index.ts';
+import { setProfileChangedCallback, getConfig } from '../config/index.ts';
+import { formatAccelerator } from '../keyboard/accelerator.ts';
 import { notifySettingsProfilesChanged } from './settings.ts';
 
 let tray: Tray | null = null;
+
+function describeTrigger(): string {
+  const shortcuts = getConfig().shortcuts;
+  if (shortcuts?.translateTrigger === 'shortcut' && shortcuts.translateShortcut) {
+    return formatAccelerator(shortcuts.translateShortcut, process.platform);
+  }
+  return process.platform === 'darwin' ? 'Double Cmd+C' : 'Double Ctrl+C';
+}
 let normalIcon: Electron.NativeImage | null = null;
 let translatingIcon: Electron.NativeImage | null = null;
 
@@ -25,6 +34,7 @@ export function createTray(): Tray {
     if (tray) {
       const menu = createTrayMenu(tray, updateMenu);
       tray.setContextMenu(menu);
+      tray.setToolTip(`Honyo - ${describeTrigger()} to translate`);
     }
   };
 
@@ -42,7 +52,6 @@ export function createTray(): Tray {
 
   // Create initial menu
   updateMenu();
-  tray.setToolTip('Honyo - Double Cmd+C to translate');
 
   return tray;
 }

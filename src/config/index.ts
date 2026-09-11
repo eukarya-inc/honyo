@@ -28,7 +28,7 @@ loadEnv();
 // Global state
 let store: StoredConfig;
 let isPaused = false;
-let profileChangedCallback: (() => void) | null = null;
+const changeListeners: Array<() => void> = [];
 
 // API keys from the environment act as a fallback when a profile has none.
 const envApiKeys: ApiKeys = {
@@ -93,6 +93,7 @@ export function initializeConfig(): void {
   store.autoCloseOnBlur ??= true;
   store.enableStreaming ??= true;
   store.popupFontSize ??= 14;
+  store.shortcuts ??= { translateTrigger: 'double-copy', translateSource: 'copy-selection' };
   isPaused = store.isPaused === true;
 }
 
@@ -169,10 +170,24 @@ export function updateProviderBaseUrls(updates: Partial<Record<ProviderId, strin
 export interface ProfileSummary {
   id: string;
   name: string;
+  shortcut?: string;
 }
 
 export function listProfiles(): ProfileSummary[] {
-  return store.profiles.map(p => ({ id: p.id, name: p.name }));
+  return store.profiles.map(p => ({
+    id: p.id,
+    name: p.name,
+    ...(p.shortcut ? { shortcut: p.shortcut } : {}),
+  }));
+}
+
+export function setProfileShortcut(id: string, shortcut: string): boolean {
+  const profile = store.profiles.find(p => p.id === id);
+  if (!profile) return false;
+  if (shortcut.trim()) profile.shortcut = shortcut.trim();
+  else delete profile.shortcut;
+  profilesChanged();
+  return true;
 }
 
 export function getActiveProfileId(): string {
@@ -184,17 +199,17 @@ export function getActiveProfileId(): string {
  * the tray menu changes, so the menu can be rebuilt.
  */
 export function setProfileChangedCallback(callback: () => void): void {
-  profileChangedCallback = callback;
+  changeListeners.push(callback);
 }
 
-/** Ask the tray (and an open settings window) to re-read the config. */
+/** Ask listeners (tray, shortcuts, an open settings window) to re-read the config. */
 export function notifyConfigChanged(): void {
-  profileChangedCallback?.();
+  for (const listener of changeListeners) listener();
 }
 
 function profilesChanged(): void {
   saveConfig();
-  profileChangedCallback?.();
+  notifyConfigChanged();
 }
 
 export function setActiveProfile(id: string): boolean {

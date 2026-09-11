@@ -7,6 +7,7 @@
 // SettingsSnapshot, one element to settings.html, and the mapping in the main
 // process — nothing here needs to change.
 import { applyNativeTheme } from '../theme.ts';
+import { acceleratorFromEvent, formatAccelerator } from '../../keyboard/accelerator.ts';
 import type {
   ModelOption,
   ProfileSummary,
@@ -48,6 +49,7 @@ function fieldElements(): Map<FieldKey, HTMLElement> {
 }
 
 function readField(el: HTMLElement): FieldValue {
+  if (isShortcutField(el)) return el.dataset.accelerator ?? '';
   switch (el.tagName.toLowerCase()) {
     case 'x-switch':
     case 'x-checkbox':
@@ -64,6 +66,10 @@ function readField(el: HTMLElement): FieldValue {
 }
 
 function writeField(el: HTMLElement, value: FieldValue): void {
+  if (isShortcutField(el)) {
+    setShortcut(el, String(value ?? ''));
+    return;
+  }
   switch (el.tagName.toLowerCase()) {
     case 'x-switch':
     case 'x-checkbox':
@@ -79,6 +85,44 @@ function writeField(el: HTMLElement, value: FieldValue): void {
 
 let loaded: SettingsSnapshot | null = null;
 const fields = new Map<FieldKey, HTMLElement>();
+
+// --- Shortcut recorders ----------------------------------------------------------
+//
+// An <x-input data-kind="shortcut"> stores the accelerator in data-accelerator
+// (what gets saved) and shows a human-readable form. Press a chord to set it,
+// Backspace/Delete to clear, Escape to leave it unchanged.
+
+function isShortcutField(el: HTMLElement): boolean {
+  return el.dataset.kind === 'shortcut';
+}
+
+function setShortcut(el: HTMLElement, accelerator: string): void {
+  el.dataset.accelerator = accelerator;
+  (el as XValueElement).value = accelerator
+    ? formatAccelerator(accelerator, window.honyo.platform)
+    : '';
+}
+
+function setupShortcutRecorders(): void {
+  for (const el of document.querySelectorAll<HTMLElement>('[data-kind="shortcut"]')) {
+    el.addEventListener('keydown', (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === 'Escape') {
+        el.blur();
+        return;
+      }
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        setShortcut(el, '');
+        return;
+      }
+      const accelerator = acceleratorFromEvent(event, window.honyo.platform);
+      if (accelerator) setShortcut(el, accelerator);
+    });
+    // Typing into the field directly makes no sense; keep it a recorder.
+    el.addEventListener('input', () => setShortcut(el, el.dataset.accelerator ?? ''));
+  }
+}
 
 function collectPatch(): SettingsPatch {
   const patch: SettingsPatch = {};
@@ -384,6 +428,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupGenerateDialog();
   setupImmediateSaves();
   setupProfiles();
+  setupShortcutRecorders();
   $('#save-button').addEventListener('click', () => void saveAll());
   document.addEventListener('keydown', event => {
     if ((event.metaKey || event.ctrlKey) && event.key === 's') {

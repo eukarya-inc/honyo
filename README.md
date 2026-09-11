@@ -18,6 +18,7 @@
 - 🧭 **Language Direction Display** - See the detected source → target language at a glance
 - 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
 - 🎨 **Customizable** - Custom instructions (with AI assist), languages, and translation rules
+- ⌨️ **Custom Shortcuts** - Keep the double Ctrl/Cmd+C trigger or set your own key combination, plus one shortcut per profile
 - 👤 **Profiles** - Keep separate sets of languages, models, prompts and API keys (personal, work, per-client) and switch from the tray
 - 🔐 **Encrypted keys & custom endpoints** - API keys are stored with the OS keychain; each provider can point at a gateway or proxy
 - 🪶 **Lightweight** - Minimal resource usage, lives in your system tray
@@ -98,10 +99,23 @@ To use the translation features, you need to configure API keys for your preferr
 Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
 languages, model, display mode); the Settings window has all of them:
 
-- **General**: result display mode, popup behaviour, launch at login
-- **Translation**: primary / secondary language, AI model, custom model
+- **General**: result display mode, translate shortcut, popup behaviour, launch at login
+- **Translation**: primary / secondary language, profile shortcut, AI model, custom model
 - **Customization**: custom prompt (with AI assist), custom languages
 - **API Keys**: per-provider keys and optional gateway endpoints
+
+### Shortcuts
+
+By default a translation starts when you press Ctrl/Cmd+C twice, which needs no extra setup.
+In Settings → General → Shortcuts you can instead pick a custom global shortcut
+(click the field and press the combination; Backspace clears it). A custom shortcut either
+copies the current selection first — Honyo sends Ctrl/Cmd+C to the active app, so the
+accessibility permission is required on macOS — or translates whatever is already on the
+clipboard.
+
+Each profile can also have its own global shortcut (Settings → Translation → Profile
+Shortcut) that switches to it from anywhere. If a combination is already taken by another
+app, Honyo shows a notification and leaves it unassigned.
 
 ### Language Settings
 

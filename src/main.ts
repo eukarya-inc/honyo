@@ -5,6 +5,8 @@ import { loadModelsCache, refreshModels, setSelectedModelProvider } from './mode
 import { createTray, setupSettingsIPC } from './ui/index.ts';
 import { openSettingsWindow } from './ui/settings.ts';
 import { setupKeyboardHandler, startKeyboardListener } from './keyboard/index.ts';
+import { registerShortcuts, unregisterShortcuts } from './keyboard/shortcuts.ts';
+import { setProfileChangedCallback } from './config/index.ts';
 import {
   setupSingleInstance,
   setupPlatformSpecific,
@@ -81,6 +83,12 @@ function initialize(): void {
 
     // Setup keyboard handler
     setupKeyboardHandler();
+
+    // Global shortcuts (custom translate trigger, profile switching); kept in
+    // sync with config changes.
+    registerShortcuts();
+    setProfileChangedCallback(() => registerShortcuts());
+    app.on('will-quit', unregisterShortcuts);
 
     // Start listening for keyboard events
     try {

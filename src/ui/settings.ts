@@ -17,6 +17,7 @@ import {
   createProfile,
   renameProfile,
   deleteProfile,
+  setProfileShortcut,
   notifyConfigChanged,
   type Config,
 } from '../config/index.ts';
@@ -179,7 +180,11 @@ function snapshot(): SettingsSnapshot {
     targetLanguage: config.targetLanguage,
     secondaryLanguage: config.secondaryLanguage,
     aiModel: config.aiModel,
+    profileShortcut: config.shortcut ?? '',
     displayMode: config.displayMode,
+    translateTrigger: config.shortcuts?.translateTrigger ?? 'double-copy',
+    translateShortcut: config.shortcuts?.translateShortcut ?? '',
+    translateSource: config.shortcuts?.translateSource ?? 'copy-selection',
     anthropicKey: keys.anthropic ?? '',
     openaiKey: keys.openai ?? '',
     googleKey: keys.google ?? '',
@@ -228,6 +233,25 @@ function applyPatch(patch: SettingsPatch): void {
   }
   if (patch.aiModel !== undefined) updates.aiModel = patch.aiModel;
   if (patch.displayMode !== undefined) updates.displayMode = patch.displayMode;
+  if (
+    patch.translateTrigger !== undefined ||
+    patch.translateShortcut !== undefined ||
+    patch.translateSource !== undefined
+  ) {
+    const prev = current.shortcuts ?? {
+      translateTrigger: 'double-copy' as const,
+      translateSource: 'copy-selection' as const,
+    };
+    const translateShortcut = (patch.translateShortcut ?? prev.translateShortcut ?? '').trim();
+    updates.shortcuts = {
+      translateTrigger: patch.translateTrigger ?? prev.translateTrigger,
+      translateSource: patch.translateSource ?? prev.translateSource,
+      ...(translateShortcut ? { translateShortcut } : {}),
+    };
+  }
+  if (patch.profileShortcut !== undefined) {
+    setProfileShortcut(getActiveProfileId(), patch.profileShortcut);
+  }
   if (patch.customPrompt !== undefined) updates.customPrompt = patch.customPrompt.trim();
   if (patch.customLanguages !== undefined) {
     updates.customLanguages = patch.customLanguages

@@ -30,6 +30,8 @@ export interface ProfileSettings {
   customModel?: CustomModel;
   customPrompt: string;
   customLanguages?: string[];
+  /** Global shortcut that activates this profile. */
+  shortcut?: string;
   providers: Record<ProviderId, ProviderSettings>;
 }
 
@@ -38,9 +40,22 @@ export interface Profile extends ProfileSettings {
   name: string;
 }
 
+export type TranslateTrigger = 'double-copy' | 'shortcut';
+export type TranslateSource = 'copy-selection' | 'clipboard';
+
+export interface ShortcutSettings {
+  /** How a translation is started. */
+  translateTrigger: TranslateTrigger;
+  /** Electron accelerator used when translateTrigger is "shortcut". */
+  translateShortcut?: string;
+  /** What a custom shortcut reads: copy the selection first, or the clipboard as-is. */
+  translateSource: TranslateSource;
+}
+
 /** Settings shared by all profiles: app behaviour and window state. */
 export interface GlobalSettings {
   isPaused: boolean;
+  shortcuts?: ShortcutSettings;
   autoCloseOnBlur?: boolean;
   enableStreaming?: boolean;
   displayMode: DisplayMode;

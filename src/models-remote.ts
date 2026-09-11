@@ -1,8 +1,16 @@
 import { app } from 'electron';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { AI_MODELS, CUSTOM_MODEL_ID, resolveModelKey, type AIModelInfo } from './models.ts';
+import {
+  AI_MODELS,
+  CUSTOM_MODEL_ID,
+  DEFAULT_AI_MODEL,
+  DEFAULT_MODEL_KEY,
+  resolveModelKey,
+  type AIModelInfo,
+} from './models.ts';
 import { limitModels } from './models-filter.ts';
+import { pickDefaultModelKey } from './models-tier.ts';
 
 type Provider = 'anthropic' | 'openai' | 'google';
 
@@ -256,7 +264,9 @@ export function getAvailableModels(): Record<string, AIModelInfo> {
   // Safety net: keep the selected model resolvable even if it dropped out of the
   // fetched/capped list (refreshModels also pins it into the cache itself).
   const rawKey = getSelectedModelKey?.();
-  const key = rawKey ? resolveModelKey(rawKey) : undefined;
+  const key = rawKey
+    ? resolveModelKey(rawKey, pickDefaultModelKey(result, DEFAULT_AI_MODEL))
+    : undefined;
   if (key && key !== CUSTOM_MODEL_ID && !result[key]) {
     const info = AI_MODELS[key];
     if (info) result[key] = info;
@@ -266,13 +276,23 @@ export function getAvailableModels(): Record<string, AIModelInfo> {
 }
 
 /**
+ * The currently effective default model key: derived from the fetched catalog
+ * (Anthropic recommended tier, Haiku preferred, newest first) so it tracks new
+ * releases, falling back to the static DEFAULT_AI_MODEL.
+ */
+export function getDefaultModelKey(): string {
+  if (!cacheLoaded) loadModelsCache();
+  return pickDefaultModelKey(buildAvailableModels(cache), DEFAULT_AI_MODEL);
+}
+
+/**
  * Look up a model by its config key (the DEFAULT_MODEL_KEY sentinel resolves to
  * the current default), preferring the dynamic registry and falling back to the
  * static list (so a previously-selected static/default key keeps working even
  * when a fetched list is present).
  */
 export function getModelInfo(modelId: string): AIModelInfo | undefined {
-  const key = resolveModelKey(modelId);
+  const key = resolveModelKey(modelId, getDefaultModelKey());
   return getAvailableModels()[key] ?? AI_MODELS[key];
 }
 
@@ -289,6 +309,8 @@ function serializeModels(models: Partial<Record<Provider, AIModelInfo[]>>): stri
 function pinSelectedModel(models: Partial<Record<Provider, AIModelInfo[]>>): void {
   const rawKey = getSelectedModelKey?.();
   if (!rawKey || rawKey === CUSTOM_MODEL_ID) return;
+  // "default" needs no pinning: it re-resolves against whatever was fetched.
+  if (rawKey === DEFAULT_MODEL_KEY) return;
   const key = resolveModelKey(rawKey);
 
   const info = buildAvailableModels(cache)[key] ?? AI_MODELS[key];

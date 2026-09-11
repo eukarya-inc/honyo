@@ -73,3 +73,18 @@ export function classifyModelTier(info: AIModelInfo): ModelTier {
 
   return 'recommended';
 }
+
+/**
+ * Pick the app default from a registry of available models (config key ->
+ * info). The default follows the fetched catalog so it tracks new releases:
+ * among Anthropic recommended-tier models (which arrive newest-first), prefer
+ * a Haiku, otherwise the newest recommended one. Falls back to `fallback`
+ * (the static DEFAULT_AI_MODEL) when the registry has no candidate.
+ */
+export function pickDefaultModelKey(models: Record<string, AIModelInfo>, fallback: string): string {
+  const candidates = Object.entries(models).filter(
+    ([, info]) => info.provider === 'anthropic' && classifyModelTier(info) === 'recommended',
+  );
+  const haiku = candidates.find(([, info]) => tokens(info.model).includes('haiku'));
+  return haiku?.[0] ?? candidates[0]?.[0] ?? fallback;
+}

@@ -5,13 +5,8 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { languages } from '../language/index.ts';
-import {
-  CUSTOM_MODEL_ID,
-  DEFAULT_MODEL_KEY,
-  DEFAULT_AI_MODEL,
-  type AIModelInfo,
-} from '../models.ts';
-import { getAvailableModels, getModelInfo } from '../models-remote.ts';
+import { CUSTOM_MODEL_ID, DEFAULT_MODEL_KEY, type AIModelInfo } from '../models.ts';
+import { getAvailableModels, getModelInfo, getDefaultModelKey } from '../models-remote.ts';
 import { classifyModelTier, type ModelTier } from '../models-tier.ts';
 import { getConfig, updateConfig, getPausedState, setPausedState } from '../config/index.ts';
 import { openSettingsWindow } from './settings.ts';
@@ -133,7 +128,7 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         config.aiModel === CUSTOM_MODEL_ID
           ? 'Custom Model'
           : config.aiModel === DEFAULT_MODEL_KEY
-            ? `Default (${getModelInfo(DEFAULT_AI_MODEL)?.name ?? DEFAULT_AI_MODEL})`
+            ? `Default (${getModelInfo(DEFAULT_MODEL_KEY)?.name ?? getDefaultModelKey()})`
             : (getModelInfo(config.aiModel)?.name ?? 'Unknown')
       }`,
       submenu: ((): MenuItemConstructorOptions[] => {
@@ -178,7 +173,7 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         // "Default" follows the app-recommended model across releases.
         const menuItems: MenuItemConstructorOptions[] = [
           {
-            label: `Default (${getModelInfo(DEFAULT_AI_MODEL)?.name ?? DEFAULT_AI_MODEL})`,
+            label: `Default (${getModelInfo(DEFAULT_MODEL_KEY)?.name ?? getDefaultModelKey()})`,
             type: 'radio',
             checked: config.aiModel === DEFAULT_MODEL_KEY,
             click: (): void => select(DEFAULT_MODEL_KEY),

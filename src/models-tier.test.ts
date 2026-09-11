@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyModelTier } from './models-tier.ts';
+import { classifyModelTier, pickDefaultModelKey } from './models-tier.ts';
 import { AI_MODELS, type AIModelInfo } from './models.ts';
 
 function m(provider: AIModelInfo['provider'], model: string, name = model): AIModelInfo {
@@ -59,5 +59,34 @@ describe('classifyModelTier', () => {
       );
       expect(rec.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('pickDefaultModelKey', () => {
+  const reg = (list: AIModelInfo[]): Record<string, AIModelInfo> =>
+    Object.fromEntries(list.map(i => [i.model, i]));
+
+  it('prefers a Haiku among Anthropic recommended models', () => {
+    const r = reg([
+      m('anthropic', 'claude-sonnet-5'),
+      m('anthropic', 'claude-haiku-5'),
+      m('anthropic', 'claude-haiku-4-5'),
+      m('google', 'gemini-3.6-flash'),
+    ]);
+    expect(pickDefaultModelKey(r, 'x')).toBe('claude-haiku-5');
+  });
+
+  it('falls back to the newest recommended Anthropic model when no Haiku is listed', () => {
+    const r = reg([m('anthropic', 'claude-opus-5'), m('anthropic', 'claude-sonnet-5')]);
+    expect(pickDefaultModelKey(r, 'x')).toBe('claude-sonnet-5');
+  });
+
+  it('falls back to the given key when nothing qualifies', () => {
+    const r = reg([m('anthropic', 'claude-opus-5'), m('google', 'gemini-3.6-flash')]);
+    expect(pickDefaultModelKey(r, 'claude-4.5-haiku')).toBe('claude-4.5-haiku');
+  });
+
+  it('picks the static Haiku from the static registry', () => {
+    expect(pickDefaultModelKey(AI_MODELS, 'x')).toBe('claude-4.5-haiku');
   });
 });

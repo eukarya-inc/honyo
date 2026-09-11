@@ -100,17 +100,25 @@ export const AI_MODELS: Record<string, AIModelInfo> = {
   },
 };
 
-// Haiku is the default: translation is a short, latency-sensitive task where a
-// fast small model is fully sufficient, so responses arrive noticeably sooner.
+// Static fallback default. Haiku is the default: translation is a short,
+// latency-sensitive task where a fast small model is fully sufficient, so
+// responses arrive noticeably sooner. The effective default follows the fetched
+// catalog (see getDefaultModelKey in models-remote.ts) and uses this key only
+// when no suitable fetched model is available.
 export const DEFAULT_AI_MODEL = 'claude-4.5-haiku';
 export const CUSTOM_MODEL_ID = 'custom-model';
 
 // Special config value meaning "follow whatever the app currently recommends".
-// It resolves to DEFAULT_AI_MODEL at use time, so users who keep it get the new
-// default automatically when it changes in a later release.
+// It is resolved at use time (models-remote.ts getDefaultModelKey), so users
+// who keep it get the new default automatically when the catalog or a later
+// release changes it.
 export const DEFAULT_MODEL_KEY = 'default';
 
-/** Map the DEFAULT_MODEL_KEY sentinel to the concrete default model key. */
-export function resolveModelKey(key: string): string {
-  return key === DEFAULT_MODEL_KEY ? DEFAULT_AI_MODEL : key;
+/**
+ * Map the DEFAULT_MODEL_KEY sentinel to a concrete model key. `defaultKey` is
+ * the currently effective default (static DEFAULT_AI_MODEL unless the caller
+ * supplies the catalog-derived one).
+ */
+export function resolveModelKey(key: string, defaultKey: string = DEFAULT_AI_MODEL): string {
+  return key === DEFAULT_MODEL_KEY ? defaultKey : key;
 }

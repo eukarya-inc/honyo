@@ -93,6 +93,7 @@ export function initializeConfig(): void {
   store.autoCloseOnBlur ??= true;
   store.enableStreaming ??= true;
   store.popupFontSize ??= 14;
+  store.historyEnabled ??= true;
   store.shortcuts ??= { translateTrigger: 'double-copy', translateSource: 'copy-selection' };
   isPaused = store.isPaused === true;
 }

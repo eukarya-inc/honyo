@@ -416,6 +416,10 @@ function setupImmediateSaves(): void {
       .then(() => notify('Launch at login updated'));
   });
 
+  $('#clear-history-button').addEventListener('click', () => {
+    void window.honyo.clearHistory().then(() => notify('History cleared'));
+  });
+
   $('#reset-popup-size-button').addEventListener('click', () => {
     void window.honyo.resetPopupSize().then(() => notify('Popup size reset to default'));
   });

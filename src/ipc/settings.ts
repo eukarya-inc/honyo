@@ -65,6 +65,7 @@ export interface SettingsSnapshot {
   enableStreaming: boolean;
   popupFontSize: number;
   openAtLogin: boolean;
+  historyEnabled: boolean;
 }
 
 /** Keys the form edits; profile metadata is managed through the profile API. */
@@ -97,6 +98,7 @@ export const SETTINGS_CHANNELS = {
   profileCreate: 'settings:profile-create',
   profileRename: 'settings:profile-rename',
   profileDelete: 'settings:profile-delete',
+  clearHistory: 'settings:clear-history',
 } as const;
 
 /** API exposed to the settings renderer on `window.honyo` by the preload script. */
@@ -113,6 +115,7 @@ export interface HonyoSettingsApi {
   renameProfile(id: string, name: string): Promise<void>;
   /** Resolves false when the profile could not be deleted (e.g. it is the last one). */
   deleteProfile(id: string): Promise<boolean>;
+  clearHistory(): Promise<void>;
   /** Fired when the active profile changes outside the window (tray menu). */
   onProfilesChanged(handler: () => void): void;
 }

@@ -19,6 +19,7 @@
 - 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
 - 🎨 **Customizable** - Custom instructions (with AI assist), languages, and translation rules
 - ⌨️ **Custom Shortcuts** - Keep the double Ctrl/Cmd+C trigger or set your own key combination, plus one shortcut per profile
+- 🕘 **History** - Recent results in the tray menu (Clipy-style), click to copy; can be disabled or cleared
 - 👤 **Profiles** - Keep separate sets of languages, models, prompts and API keys (personal, work, per-client) and switch from the tray
 - 🔐 **Encrypted keys & custom endpoints** - API keys are stored with the OS keychain; each provider can point at a gateway or proxy
 - 🪶 **Lightweight** - Minimal resource usage, lives in your system tray
@@ -99,10 +100,17 @@ To use the translation features, you need to configure API keys for your preferr
 Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
 languages, model, display mode); the Settings window has all of them:
 
-- **General**: result display mode, translate shortcut, popup behaviour, launch at login
+- **General**: result display mode, translate shortcut, popup behaviour, history, launch at login
 - **Translation**: primary / secondary language, profile shortcut, AI model, custom model
 - **Customization**: custom prompt (with AI assist), custom languages
 - **API Keys**: per-provider keys and optional gateway endpoints
+
+### History
+
+Every result is kept in a local history (`history.json`, newest first, up to 100 entries) and
+the last 15 appear under **History** in the tray menu; clicking an entry copies its result to
+the clipboard. Settings → General → History lets you turn the history off (the tray submenu
+disappears and nothing new is recorded) or clear it.
 
 ### Shortcuts
 
@@ -327,6 +335,7 @@ npm start
 | `HONYO_USER_DATA_DIR` | Use a separate config/cache directory so a dev instance can run next to an installed Honyo |
 | `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
 | `HONYO_THEME_PLATFORM=win32\|linux` | Preview another OS's settings theme (Fluent / Adwaita) |
+| `HONYO_DEBUG_ECHO=text` | Run a no-network echo action through the popup/notification and history pipeline, then quit |
 | `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB`, `HONYO_SETTINGS_SCREENSHOT_SCRIPT` to run JS first, and `HONYO_THEME=light\|dark`) |
 
@@ -337,8 +346,10 @@ src/
 ├── main.ts              # Entry point
 ├── models.ts            # AI model definitions
 ├── models-tier.ts       # Recommended/advanced model classification
+├── actions/             # Action framework: what Honyo does to copied content (translate, …)
 ├── app/                 # App lifecycle, updater, accessibility
 ├── config/              # Configuration management
+├── history/             # Local history of action results
 ├── ipc/                 # Typed IPC contracts shared by main, preload and renderer
 ├── keyboard/            # Keyboard event handling (uiohook-napi)
 ├── language/            # Language detection and constants

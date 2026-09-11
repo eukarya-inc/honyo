@@ -27,6 +27,9 @@ import {
 import { cancelCurrentTranslation, isCurrentlyTranslating } from '../keyboard/handler.ts';
 import { closePopup } from './popup.ts';
 import { formatAccelerator } from '../keyboard/accelerator.ts';
+import { listHistory, clearHistory } from '../history/index.ts';
+import { previewText } from '../history/store.ts';
+import { clipboard } from 'electron';
 
 // Get __dirname in both ESM and CommonJS
 const getCurrentDir = (): string => {
@@ -50,6 +53,9 @@ try {
 } catch (error) {
   console.error('Failed to read package.json version:', error);
 }
+
+// Number of recent results listed in the tray's History submenu.
+const HISTORY_MENU_ITEMS = 15;
 
 // Human-readable description of how a translation is triggered.
 export function describeTranslateTrigger(): string {
@@ -247,6 +253,36 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         return menuItems;
       })(),
     },
+    ...(config.historyEnabled !== false
+      ? [
+          {
+            label: 'History',
+            submenu: ((): MenuItemConstructorOptions[] => {
+              const entries = listHistory().slice(0, HISTORY_MENU_ITEMS);
+              const items: MenuItemConstructorOptions[] = entries.map(entry => ({
+                label: previewText(entry.output),
+                // macOS shows these as a second line / hover text.
+                sublabel: previewText(entry.input),
+                toolTip:
+                  entry.output.length > 400 ? entry.output.slice(0, 400) + '…' : entry.output,
+                click: (): void => {
+                  clipboard.writeText(entry.output);
+                },
+              }));
+              if (items.length === 0) items.push({ label: 'No history yet', enabled: false });
+              items.push({ type: 'separator' });
+              items.push({
+                label: 'Clear History',
+                enabled: entries.length > 0,
+                click: (): void => {
+                  clearHistory();
+                },
+              });
+              return items;
+            })(),
+          },
+        ]
+      : []),
     {
       label: 'Settings...',
       click: (): void => {

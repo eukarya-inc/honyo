@@ -25,6 +25,7 @@ const api: HonyoSettingsApi = {
   renameProfile: (id: string, name: string) =>
     ipcRenderer.invoke(SETTINGS_CHANNELS.profileRename, id, name),
   deleteProfile: (id: string) => ipcRenderer.invoke(SETTINGS_CHANNELS.profileDelete, id),
+  clearHistory: () => ipcRenderer.invoke(SETTINGS_CHANNELS.clearHistory),
   onProfilesChanged: (handler: () => void) => {
     ipcRenderer.on(SETTINGS_EVENTS.profilesChanged, () => handler());
   },

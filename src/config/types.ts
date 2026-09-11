@@ -56,6 +56,8 @@ export interface ShortcutSettings {
 export interface GlobalSettings {
   isPaused: boolean;
   shortcuts?: ShortcutSettings;
+  /** Keep a local history of action results (default true). */
+  historyEnabled?: boolean;
   autoCloseOnBlur?: boolean;
   enableStreaming?: boolean;
   displayMode: DisplayMode;

@@ -486,6 +486,26 @@
           </div>
         </div>
 
+        <span class="group-title">History</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Keep a history of results</x-label>
+              <span class="hint"
+                >Recent results appear in the tray menu; stored only on this device.</span
+              >
+            </div>
+            <x-switch data-field="historyEnabled"></x-switch>
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Clear history</x-label>
+              <span class="hint">Removes all saved results now.</span>
+            </div>
+            <x-button id="clear-history-button"><x-label>Clear</x-label></x-button>
+          </div>
+        </div>
+
         <span class="group-title">Startup</span>
         <div class="group">
           <div class="row">

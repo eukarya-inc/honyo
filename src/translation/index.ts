@@ -214,7 +214,11 @@ export async function translateText(
   return (await translateTextSafe(text, primaryLanguage, secondaryLanguage, signal)).translation;
 }
 
-export async function translateTextStreaming(
+/**
+ * Streaming translation that THROWS on failure (API-key validation included).
+ * Returns the final translation text.
+ */
+export async function translateTextStreamingStrict(
   text: string,
   primaryLanguage: string,
   secondaryLanguage: string,
@@ -225,75 +229,94 @@ export async function translateTextStreaming(
   const config = getConfig();
   const apiKeys = getApiKeys();
 
-  try {
-    // Validate API key
-    const validation = validateApiKey(config, apiKeys);
-    if (!validation.valid) {
-      return validation.error || 'API key validation failed';
+  // Validate API key (shows a Notification on failure) and throw on invalid.
+  const validation = validateApiKey(config, apiKeys);
+  if (!validation.valid) {
+    throw new TranslationValidationError(validation.error || 'API key validation failed');
+  }
+
+  // Get the model
+  const model = getModel(config, apiKeys);
+
+  console.log(`Translating text (streaming):`, text.slice(0, 50) + '...');
+
+  // Build system prompt
+  const systemPrompt = buildSystemPrompt(
+    primaryLanguage,
+    secondaryLanguage,
+    config.customPrompt,
+    config.customLanguages,
+    text,
+  );
+
+  const result = streamText(
+    signal
+      ? {
+          model,
+          system: systemPrompt,
+          prompt: text,
+          abortSignal: signal,
+        }
+      : {
+          model,
+          system: systemPrompt,
+          prompt: text,
+        },
+  );
+
+  let fullRaw = '';
+  let headerResolved = false;
+  let languagesEmitted = false;
+
+  const emitLanguages = (parsed: ParsedTranslation): void => {
+    if (!languagesEmitted && parsed.sourceLanguage && parsed.targetLanguage) {
+      languagesEmitted = true;
+      onLanguages?.(parsed.sourceLanguage, parsed.targetLanguage);
     }
+  };
 
-    // Get the model
-    const model = getModel(config, apiKeys);
+  for await (const chunk of result.textStream) {
+    fullRaw += chunk;
+    // Buffer silently until we can tell whether a header line is present.
+    if (!headerResolved) {
+      if (!isHeaderResolvable(fullRaw)) continue;
+      headerResolved = true;
+    }
+    const parsed = parseTranslationOutput(fullRaw);
+    emitLanguages(parsed);
+    onChunk(parsed.translation);
+  }
 
-    console.log(`Translating text (streaming):`, text.slice(0, 50) + '...');
+  // Final flush (covers very short outputs that never crossed the buffer
+  // threshold, and guarantees the last body is delivered header-stripped).
+  const finalParsed = parseTranslationOutput(fullRaw);
+  emitLanguages(finalParsed);
+  onChunk(finalParsed.translation);
 
-    // Build system prompt
-    const systemPrompt = buildSystemPrompt(
+  console.log('Translation complete (streaming):', finalParsed.translation.slice(0, 50) + '...');
+  return finalParsed.translation.trim();
+}
+
+/** Non-throwing streaming translation: returns the legacy error string on failure. */
+export async function translateTextStreaming(
+  text: string,
+  primaryLanguage: string,
+  secondaryLanguage: string,
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal,
+  onLanguages?: (sourceLanguage: string, targetLanguage: string) => void,
+): Promise<string> {
+  try {
+    return await translateTextStreamingStrict(
+      text,
       primaryLanguage,
       secondaryLanguage,
-      config.customPrompt,
-      config.customLanguages,
-      text,
+      onChunk,
+      signal,
+      onLanguages,
     );
-
-    const result = streamText(
-      signal
-        ? {
-            model,
-            system: systemPrompt,
-            prompt: text,
-            abortSignal: signal,
-          }
-        : {
-            model,
-            system: systemPrompt,
-            prompt: text,
-          },
-    );
-
-    let fullRaw = '';
-    let headerResolved = false;
-    let languagesEmitted = false;
-
-    const emitLanguages = (parsed: ParsedTranslation): void => {
-      if (!languagesEmitted && parsed.sourceLanguage && parsed.targetLanguage) {
-        languagesEmitted = true;
-        onLanguages?.(parsed.sourceLanguage, parsed.targetLanguage);
-      }
-    };
-
-    for await (const chunk of result.textStream) {
-      fullRaw += chunk;
-      // Buffer silently until we can tell whether a header line is present.
-      if (!headerResolved) {
-        if (!isHeaderResolvable(fullRaw)) continue;
-        headerResolved = true;
-      }
-      const parsed = parseTranslationOutput(fullRaw);
-      emitLanguages(parsed);
-      onChunk(parsed.translation);
-    }
-
-    // Final flush (covers very short outputs that never crossed the buffer
-    // threshold, and guarantees the last body is delivered header-stripped).
-    const finalParsed = parseTranslationOutput(fullRaw);
-    emitLanguages(finalParsed);
-    onChunk(finalParsed.translation);
-
-    console.log('Translation complete (streaming):', finalParsed.translation.slice(0, 50) + '...');
-    return finalParsed.translation.trim();
   } catch (error) {
-    return handleTranslationError(error, config);
+    return handleTranslationError(error, getConfig());
   }
 }
 

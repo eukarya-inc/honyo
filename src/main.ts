@@ -6,7 +6,11 @@ import { createTray, setupSettingsIPC } from './ui/index.ts';
 import { openSettingsWindow } from './ui/settings.ts';
 import { setupKeyboardHandler, startKeyboardListener } from './keyboard/index.ts';
 import { registerShortcuts, unregisterShortcuts } from './keyboard/shortcuts.ts';
-import { setProfileChangedCallback } from './config/index.ts';
+import { setProfileChangedCallback, notifyConfigChanged } from './config/index.ts';
+import { registerAction } from './actions/registry.ts';
+import { runAction } from './actions/run.ts';
+import { translateAction } from './actions/translate.ts';
+import { onHistoryChanged } from './history/index.ts';
 import {
   setupSingleInstance,
   setupPlatformSpecific,
@@ -55,6 +59,9 @@ function initialize(): void {
     // Load cached model list (synchronous) before building the tray menu
     loadModelsCache();
 
+    // Built-in actions
+    registerAction(translateAction);
+
     // Setup auto-updater
     setupAutoUpdater();
 
@@ -89,6 +96,29 @@ function initialize(): void {
     registerShortcuts();
     setProfileChangedCallback(() => registerShortcuts());
     app.on('will-quit', unregisterShortcuts);
+
+    // History entries appear in the tray menu
+    onHistoryChanged(notifyConfigChanged);
+
+    // Dev aid: HONYO_DEBUG_ECHO=<text> runs a no-network "echo" action through
+    // the full pipeline (popup/notification + history) and quits.
+    const echoText = process.env.HONYO_DEBUG_ECHO;
+    if (echoText) {
+      registerAction({
+        id: 'echo',
+        name: 'Echo',
+        accepts: ['text'],
+        run: async (input, ctx) => {
+          const text = input.kind === 'text' ? `echo: ${input.text}` : '';
+          ctx.onMeta?.({ sourceLanguage: 'Test', targetLanguage: 'Echo' });
+          ctx.onChunk?.(text);
+          return { text };
+        },
+      });
+      void runAction('echo', { kind: 'text', text: echoText }).then(() => {
+        setTimeout(() => app.quit(), 800);
+      });
+    }
 
     // Start listening for keyboard events
     try {

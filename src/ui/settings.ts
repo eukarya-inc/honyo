@@ -22,6 +22,7 @@ import {
   type Config,
 } from '../config/index.ts';
 import { languages } from '../language/constants.ts';
+import { clearHistory } from '../history/index.ts';
 import { getAvailableModels, getDefaultModelKey } from '../models-remote.ts';
 import { classifyModelTier } from '../models-tier.ts';
 import { DEFAULT_MODEL_KEY } from '../models.ts';
@@ -199,6 +200,7 @@ function snapshot(): SettingsSnapshot {
     enableStreaming: config.enableStreaming ?? true,
     popupFontSize: config.popupFontSize ?? 14,
     openAtLogin: app.getLoginItemSettings().openAtLogin,
+    historyEnabled: config.historyEnabled !== false,
   };
 }
 
@@ -271,6 +273,7 @@ function applyPatch(patch: SettingsPatch): void {
   if (typeof patch.popupFontSize === 'number' && !Number.isNaN(patch.popupFontSize)) {
     updates.popupFontSize = Math.min(24, Math.max(10, Math.round(patch.popupFontSize)));
   }
+  if (patch.historyEnabled !== undefined) updates.historyEnabled = patch.historyEnabled;
   if (patch.openAtLogin !== undefined) {
     app.setLoginItemSettings({ openAtLogin: patch.openAtLogin });
     updates.openAtLogin = patch.openAtLogin;
@@ -359,6 +362,10 @@ export function setupSettingsIPC(): void {
 
   ipcMain.handle(SETTINGS_CHANNELS.profileRename, (_event, id: string, name: string): void => {
     renameProfile(id, name);
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.clearHistory, (): void => {
+    clearHistory();
   });
 
   ipcMain.handle(SETTINGS_CHANNELS.profileDelete, (_event, id: string): boolean =>

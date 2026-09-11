@@ -25,11 +25,13 @@
         background: var(--background-color);
         color: var(--text-color);
       }
+      /* Three-column toolbar: profile controls | tabs | Save. Equal outer
+         columns keep the tabs centred in the window. */
       body header.toolbar {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center;
-        justify-content: center;
-        position: relative;
+        gap: 8px;
         padding: 10px 14px;
         flex: none;
         /* The toolbar doubles as the window drag area. */
@@ -37,24 +39,30 @@
         user-select: none;
       }
       body header.toolbar x-tabs,
-      body header.toolbar x-button {
+      body header.toolbar x-button,
+      body header.toolbar .profile-bar {
         -webkit-app-region: no-drag;
       }
       body header.toolbar .profile-bar {
-        position: absolute;
-        left: 14px;
-        top: 50%;
-        transform: translateY(-50%);
+        justify-self: start;
         display: flex;
         align-items: center;
         gap: 4px;
-        -webkit-app-region: no-drag;
+        min-width: 0;
       }
       body header.toolbar #profile-select {
-        max-width: 160px;
+        max-width: 140px;
       }
-      html[data-platform='darwin'] body header.toolbar .profile-bar {
-        left: 84px;
+      body header.toolbar #save-button {
+        justify-self: end;
+      }
+      /* macOS: the title bar is hidden (hiddenInset); keep the traffic lights
+         clear on the left and mirror that space on the right so the centre
+         column stays centred. */
+      html[data-platform='darwin'] body header.toolbar {
+        padding-left: 84px;
+        padding-right: 84px;
+        min-height: 52px;
       }
       body .footnote {
         margin: 10px 4px 0;
@@ -67,26 +75,6 @@
       }
       body dialog p {
         margin: 0 0 12px;
-      }
-      body header.toolbar #save-button {
-        position: absolute;
-        right: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-      }
-      /* macOS: the title bar is hidden (hiddenInset), leave room for the traffic lights. */
-      html[data-platform='darwin'] body header.toolbar {
-        padding-left: 84px;
-        padding-right: 84px;
-        min-height: 52px;
-      }
-      /* Leave room for the profile controls on the left and Save on the right. */
-      body header.toolbar {
-        padding-left: 240px;
-        padding-right: 100px;
-      }
-      html[data-platform='darwin'] body header.toolbar {
-        padding-left: 300px;
       }
       body main {
         flex: 1;

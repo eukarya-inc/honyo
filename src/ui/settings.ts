@@ -60,7 +60,7 @@ export function openSettingsWindow(): void {
   settingsWindow = new BrowserWindow({
     width: 760,
     height: 600,
-    minWidth: 560,
+    minWidth: 640,
     minHeight: 420,
     webPreferences: {
       preload: join(rootDir, 'build/preload/settings.cjs'),

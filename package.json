@@ -8,7 +8,8 @@
   },
   "scripts": {
     "_comment": "NOTE: 'build' and 'dist' scripts are temporary until Electron supports Node v24. See scripts/build.ts for details.",
-    "start": "electron .",
+    "start": "npm run build:renderer && electron .",
+    "build:renderer": "node scripts/build-renderer.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts --cache",
     "lint:fix": "eslint src/**/*.ts --fix --cache",
@@ -73,6 +74,7 @@
     "electron-updater": "^6.6.2",
     "turndown": "^7.2.1",
     "uiohook-napi": "^1.5.4",
+    "xel": "^0.44.2",
     "zod": "^4.1.11"
   },
   "buildConfig": {

@@ -1,7 +1,9 @@
+import './app/dev-userdata.ts';
 import { app } from 'electron';
 import { initializeConfig, getConfig } from './config/index.ts';
 import { loadModelsCache, refreshModels, setSelectedModelProvider } from './models-remote.ts';
 import { createTray, setupSettingsIPC } from './ui/index.ts';
+import { openSettingsWindow } from './ui/settings.ts';
 import { setupKeyboardHandler, startKeyboardListener } from './keyboard/index.ts';
 import {
   setupSingleInstance,
@@ -60,6 +62,9 @@ function initialize(): void {
 
     // Setup IPC for popup window
     setupPopupIPC();
+
+    // Dev aid: HONYO_OPEN_SETTINGS=1 opens the settings window on launch.
+    if (process.env.HONYO_OPEN_SETTINGS) openSettingsWindow();
 
     // Setup keyboard handler
     setupKeyboardHandler();

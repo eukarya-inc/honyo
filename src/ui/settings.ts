@@ -1,6 +1,7 @@
-import { BrowserWindow, ipcMain, app } from 'electron';
+import { BrowserWindow, ipcMain, app, shell, nativeTheme } from 'electron';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { writeFileSync } from 'fs';
 import { generateText } from 'ai';
 import {
   getApiKeys,
@@ -8,14 +9,19 @@ import {
   getConfig,
   updateConfig,
   clearPopupSize,
-  type ApiKeys,
   type Config,
-  type CustomModel,
 } from '../config/index.ts';
 import { resetPopupSize } from './popup.ts';
 import { getAIProvider } from '../translation/providers.ts';
 import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo, refreshModels } from '../models-remote.ts';
+import {
+  SETTINGS_CHANNELS,
+  type GeneratePromptRequest,
+  type GeneratePromptResult,
+  type SettingsPatch,
+  type SettingsSnapshot,
+} from '../ipc/settings.ts';
 
 // Get __dirname in both ESM and CommonJS
 const getCurrentDir = (): string => {
@@ -29,6 +35,8 @@ const getCurrentDir = (): string => {
 };
 
 const currentDir = getCurrentDir();
+// Project root in dev (src/ui -> ../..) and in the packaged app (build/ui -> ../..).
+const rootDir = join(currentDir, '../..');
 
 let settingsWindow: BrowserWindow | null = null;
 
@@ -39,155 +47,148 @@ export function openSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 800,
+    width: 760,
     height: 600,
+    minWidth: 560,
+    minHeight: 420,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: join(rootDir, 'build/preload/settings.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
     },
     resizable: true,
     minimizable: true,
     maximizable: true,
     title: 'Settings',
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
   });
 
-  const htmlPath = join(currentDir, '../../settings.html');
-  void settingsWindow.loadFile(htmlPath);
+  // External links open in the system browser, never in a new Electron window.
+  settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  void settingsWindow.loadFile(join(rootDir, 'settings.html'));
 
   // Refresh the model list when settings open (respects the 24h cache TTL);
   // rebuilds the tray menu automatically if the list changed.
   void refreshModels();
+
+  // Dev aid: HONYO_SETTINGS_SCREENSHOT=/path/out.png captures the window
+  // once it has rendered, then quits. Used to eyeball the UI without a tray.
+  // HONYO_SETTINGS_SCREENSHOT_TAB selects a tab and HONYO_THEME=light|dark
+  // forces the colour scheme before capturing.
+  const screenshotPath = process.env.HONYO_SETTINGS_SCREENSHOT;
+  if (screenshotPath) {
+    const theme = process.env.HONYO_THEME;
+    if (theme === 'light' || theme === 'dark') nativeTheme.themeSource = theme;
+    const tab = process.env.HONYO_SETTINGS_SCREENSHOT_TAB;
+    settingsWindow.webContents.on('console-message', event => {
+      console.log(
+        `[renderer:${event.level}] ${event.message} (${event.sourceId}:${event.lineNumber})`,
+      );
+    });
+    settingsWindow.webContents.once('did-finish-load', () => {
+      setTimeout(() => {
+        void (async (): Promise<void> => {
+          if (tab) {
+            await settingsWindow?.webContents.executeJavaScript(
+              `document.querySelector('#tabs').value = ${JSON.stringify(tab)};
+               document.querySelector('#tabs').dispatchEvent(new CustomEvent('change'));`,
+            );
+            await new Promise(r => setTimeout(r, 300));
+          }
+          const image = await settingsWindow?.webContents.capturePage();
+          if (image) writeFileSync(screenshotPath, image.toPNG());
+          app.quit();
+        })();
+      }, 1500);
+    });
+  }
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;
   });
 }
 
-export function setupSettingsIPC(): void {
-  ipcMain.on('load-api-keys', event => {
-    event.reply('api-keys-loaded', getApiKeys());
-  });
+// --- Snapshot mapping ----------------------------------------------------
 
-  ipcMain.on('save-api-keys', (event, keys: Partial<ApiKeys>) => {
-    updateApiKeys(keys);
-    event.reply('api-keys-saved', true);
-  });
+function snapshot(): SettingsSnapshot {
+  const config = getConfig();
+  const keys = getApiKeys();
+  return {
+    anthropicKey: keys.anthropic ?? '',
+    openaiKey: keys.openai ?? '',
+    googleKey: keys.google ?? '',
+    customPrompt: config.customPrompt ?? '',
+    customModelName: config.customModel?.model ?? '',
+    customModelProvider: config.customModel?.provider ?? '',
+    customLanguages: (config.customLanguages ?? []).join('\n'),
+    autoCloseOnBlur: config.autoCloseOnBlur ?? true,
+    enableStreaming: config.enableStreaming ?? true,
+    popupFontSize: config.popupFontSize ?? 14,
+    openAtLogin: app.getLoginItemSettings().openAtLogin,
+  };
+}
 
-  ipcMain.on('load-custom-prompt', event => {
+function applyPatch(patch: SettingsPatch): void {
+  const keyUpdates: Partial<{ anthropic: string; openai: string; google: string }> = {};
+  if (patch.anthropicKey !== undefined) keyUpdates.anthropic = patch.anthropicKey.trim();
+  if (patch.openaiKey !== undefined) keyUpdates.openai = patch.openaiKey.trim();
+  if (patch.googleKey !== undefined) keyUpdates.google = patch.googleKey.trim();
+  if (Object.keys(keyUpdates).length > 0) updateApiKeys(keyUpdates);
+
+  const updates: Partial<Config> = {};
+  if (patch.customPrompt !== undefined) updates.customPrompt = patch.customPrompt.trim();
+  if (patch.customLanguages !== undefined) {
+    updates.customLanguages = patch.customLanguages
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+  }
+  if (patch.customModelName !== undefined || patch.customModelProvider !== undefined) {
+    const current = getConfig().customModel;
+    const model = (patch.customModelName ?? current?.model ?? '').trim();
+    const provider = patch.customModelProvider ?? current?.provider ?? '';
+    if (provider !== '') updates.customModel = { model, provider };
+    else if (current) updates.customModel = { model, provider: current.provider };
+  }
+  if (patch.autoCloseOnBlur !== undefined) updates.autoCloseOnBlur = patch.autoCloseOnBlur;
+  if (patch.enableStreaming !== undefined) updates.enableStreaming = patch.enableStreaming;
+  if (typeof patch.popupFontSize === 'number' && !Number.isNaN(patch.popupFontSize)) {
+    updates.popupFontSize = Math.min(24, Math.max(10, Math.round(patch.popupFontSize)));
+  }
+  if (patch.openAtLogin !== undefined) {
+    app.setLoginItemSettings({ openAtLogin: patch.openAtLogin });
+    updates.openAtLogin = patch.openAtLogin;
+  }
+  if (Object.keys(updates).length > 0) updateConfig(updates);
+}
+
+// --- Prompt generation -----------------------------------------------------
+
+async function generateCustomPrompt(data: GeneratePromptRequest): Promise<GeneratePromptResult> {
+  try {
     const config = getConfig();
-    event.reply('custom-prompt-loaded', config.customPrompt);
-  });
+    const apiKeys = getApiKeys();
 
-  ipcMain.on('save-custom-prompt', (event, customPrompt: string) => {
-    updateConfig({ customPrompt });
-    event.reply('custom-prompt-saved', true);
-  });
-
-  ipcMain.on('load-custom-model', event => {
-    const config = getConfig();
-    event.reply('custom-model-loaded', config.customModel);
-  });
-
-  ipcMain.on('save-custom-model', (event, customModel: CustomModel) => {
-    updateConfig({ customModel });
-    event.reply('custom-model-saved', true);
-  });
-
-  ipcMain.on('load-custom-languages', event => {
-    const config = getConfig();
-    event.reply('custom-languages-loaded', config.customLanguages || []);
-  });
-
-  ipcMain.on('save-custom-languages', (event, customLanguages: string[]) => {
-    updateConfig({ customLanguages });
-    event.reply('custom-languages-saved', true);
-  });
-
-  ipcMain.on('load-auto-close-on-blur', event => {
-    const config = getConfig();
-    event.reply('auto-close-on-blur-loaded', config.autoCloseOnBlur ?? true);
-    event.reply('enable-streaming-loaded', config.enableStreaming ?? true);
-    event.reply('popup-font-size-loaded', config.popupFontSize ?? 14);
-  });
-
-  ipcMain.on('save-auto-close-on-blur', (event, autoCloseOnBlur: boolean) => {
-    updateConfig({ autoCloseOnBlur });
-    event.reply('auto-close-on-blur-saved', true);
-  });
-
-  ipcMain.on(
-    'save-display-settings',
-    (
-      event,
-      settings: { autoCloseOnBlur: boolean; enableStreaming: boolean; popupFontSize?: number },
-    ) => {
-      const updates: Partial<Config> = {
-        autoCloseOnBlur: settings.autoCloseOnBlur,
-        enableStreaming: settings.enableStreaming,
-      };
-      if (typeof settings.popupFontSize === 'number' && !Number.isNaN(settings.popupFontSize)) {
-        updates.popupFontSize = Math.min(24, Math.max(10, Math.round(settings.popupFontSize)));
+    let apiKey: string | undefined;
+    if (config.aiModel === CUSTOM_MODEL_ID) {
+      if (!config.customModel?.provider) {
+        return { success: false, error: 'Custom model not configured' };
       }
-      updateConfig(updates);
-      event.reply('display-settings-saved', true);
-    },
-  );
+      apiKey = apiKeys[config.customModel.provider];
+    } else {
+      const modelInfo = getModelInfo(config.aiModel);
+      if (modelInfo) apiKey = apiKeys[modelInfo.provider];
+    }
+    if (!apiKey) return { success: false, error: 'API key not configured' };
 
-  ipcMain.on('reset-popup-size', event => {
-    clearPopupSize();
-    // Resize the popup immediately if one is currently open.
-    resetPopupSize();
-    event.reply('popup-size-reset', true);
-  });
+    const model = getAIProvider(config.aiModel, apiKeys, config.customModel);
 
-  ipcMain.on('load-open-at-login', event => {
-    const loginSettings = app.getLoginItemSettings();
-    event.reply('open-at-login-loaded', loginSettings.openAtLogin);
-  });
-
-  ipcMain.on('save-open-at-login', (event, openAtLogin: boolean) => {
-    app.setLoginItemSettings({ openAtLogin });
-    updateConfig({ openAtLogin });
-    event.reply('open-at-login-saved', true);
-  });
-
-  ipcMain.on(
-    'generate-custom-prompt',
-    (event, data: { currentPrompt: string; instruction: string }) => {
-      void (async (): Promise<void> => {
-        try {
-          const config = getConfig();
-          const apiKeys = getApiKeys();
-
-          // Validate API key
-          let apiKey: string | undefined;
-          if (config.aiModel === CUSTOM_MODEL_ID) {
-            if (!config.customModel?.provider) {
-              event.reply('custom-prompt-generated', {
-                success: false,
-                error: 'Custom model not configured',
-              });
-              return;
-            }
-            apiKey = apiKeys[config.customModel.provider];
-          } else {
-            const modelInfo = getModelInfo(config.aiModel);
-            if (modelInfo) {
-              apiKey = apiKeys[modelInfo.provider];
-            }
-          }
-
-          if (!apiKey) {
-            event.reply('custom-prompt-generated', {
-              success: false,
-              error: 'API key not configured',
-            });
-            return;
-          }
-
-          const model = getAIProvider(config.aiModel, apiKeys, config.customModel);
-
-          const systemPrompt = `You are an expert at writing translation instruction prompts.
+    const systemPrompt = `You are an expert at writing translation instruction prompts.
 Your task is to generate or modify a custom prompt that will be used to guide AI translations.
 
 Rules:
@@ -198,28 +199,38 @@ Rules:
 5. If there's an existing prompt, improve or modify it based on the user's request
 6. If no existing prompt, create a new one based on the user's request`;
 
-          const userPrompt = data.currentPrompt
-            ? `Current custom prompt:\n${data.currentPrompt}\n\nUser's request: ${data.instruction}`
-            : `User's request: ${data.instruction}`;
+    const userPrompt = data.currentPrompt
+      ? `Current custom prompt:\n${data.currentPrompt}\n\nUser's request: ${data.instruction}`
+      : `User's request: ${data.instruction}`;
 
-          const { text } = await generateText({
-            model,
-            system: systemPrompt,
-            prompt: userPrompt,
-          });
+    const { text } = await generateText({ model, system: systemPrompt, prompt: userPrompt });
+    return { success: true, prompt: text.trim() };
+  } catch (error) {
+    console.error('Failed to generate custom prompt:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
-          event.reply('custom-prompt-generated', {
-            success: true,
-            prompt: text.trim(),
-          });
-        } catch (error) {
-          console.error('Failed to generate custom prompt:', error);
-          event.reply('custom-prompt-generated', {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
-      })();
-    },
+// --- IPC ---------------------------------------------------------------------
+
+export function setupSettingsIPC(): void {
+  ipcMain.handle(SETTINGS_CHANNELS.load, (): SettingsSnapshot => snapshot());
+
+  ipcMain.handle(SETTINGS_CHANNELS.save, (_event, patch: SettingsPatch): void => {
+    applyPatch(patch);
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.resetPopupSize, (): void => {
+    clearPopupSize();
+    // Resize the popup immediately if one is currently open.
+    resetPopupSize();
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.generatePrompt, (_event, data: GeneratePromptRequest) =>
+    generateCustomPrompt(data),
   );
+
+  ipcMain.handle(SETTINGS_CHANNELS.openExternal, async (_event, url: string): Promise<void> => {
+    if (/^https?:\/\//.test(url)) await shell.openExternal(url);
+  });
 }

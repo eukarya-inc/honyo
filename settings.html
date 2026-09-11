@@ -2,785 +2,324 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
     <title>Settings</title>
+    <!-- The renderer bundle picks the OS theme (Cupertino / Fluent / Adwaita,
+         light or dark) and must run before Xel initialises. -->
+    <script src="build/renderer/settings.js"></script>
+    <script src="node_modules/xel/xel.js" type="module"></script>
     <style>
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        padding: 0;
-        margin: 0;
-        background: #f5f5f5;
-        height: 100%;
+      /* Layout modelled on macOS System Settings: a segmented control in the
+         toolbar, then inset grouped lists (label left, control right).
+         Xel's theme is an adopted stylesheet that cascades after this one, so
+         rules carry a `body` prefix for specificity. */
+      html body {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
         overflow: hidden;
-      }
-      .tabs {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding-right: 20px;
-      }
-      .tab-group {
-        display: flex;
-      }
-      .tab {
-        padding: 15px 30px;
-        cursor: pointer;
-        background: none;
-        border: none;
-        font-size: 14px;
-        color: #666;
-        transition: all 0.2s;
-        border-bottom: 3px solid transparent;
-      }
-      .tab:hover {
-        color: #333;
-      }
-      .tab.active {
-        color: #007aff;
-        border-bottom-color: #007aff;
-      }
-      .content {
-        padding: 20px;
-        height: calc(100vh - 60px);
-        overflow-y: auto;
-      }
-      .tab-panel {
-        display: none;
-        animation: fadeIn 0.3s;
-      }
-      .tab-panel.active {
-        display: block;
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      h2 {
-        margin-top: 0;
-        color: #333;
-      }
-      .form-group {
-        margin-bottom: 20px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        color: #555;
-        font-weight: 500;
-      }
-      input[type='password'],
-      input[type='text'],
-      textarea,
-      select {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-        box-sizing: border-box;
-      }
-      input[type='password']:focus,
-      input[type='text']:focus,
-      textarea:focus,
-      select:focus {
-        outline: none;
-        border-color: #007aff;
-      }
-      textarea {
-        resize: vertical;
-        min-height: 150px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.5;
-      }
-      input::placeholder,
-      textarea::placeholder {
-        color: #ccc;
-      }
-      .help-text {
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-      }
-      .buttons {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 30px;
-      }
-      button {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-      }
-      .save-btn {
-        background: #007aff;
-        color: white;
-      }
-      .save-btn:hover {
-        background: #0056b3;
-      }
-      .save-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
-      .tab-save-btn {
-        padding: 6px 16px;
         font-size: 13px;
+        background: var(--background-color);
+        color: var(--text-color);
       }
-      .status {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 4px;
-        font-size: 14px;
-        display: none;
-      }
-      .status.success {
-        background: #d4edda;
-        color: #155724;
-        display: block;
-      }
-      .status.error {
-        background: #f8d7da;
-        color: #721c24;
-        display: block;
-      }
-      .checkbox-group {
+      body header.toolbar {
         display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-      input[type='checkbox'] {
-        width: 18px;
-        height: 18px;
-        margin-right: 10px;
-        cursor: pointer;
-      }
-      .checkbox-label {
-        cursor: pointer;
-        user-select: none;
-        font-weight: normal;
-      }
-      .generate-btn {
-        background: #6c5ce7;
-        color: white;
-        margin-top: 10px;
-      }
-      .generate-btn:hover {
-        background: #5b4cdb;
-      }
-      .generate-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
         align-items: center;
         justify-content: center;
+        position: relative;
+        padding: 10px 14px;
+        flex: none;
+        /* The toolbar doubles as the window drag area. */
+        -webkit-app-region: drag;
+        user-select: none;
       }
-      .modal-overlay.active {
-        display: flex;
+      body header.toolbar x-tabs,
+      body header.toolbar x-button {
+        -webkit-app-region: no-drag;
       }
-      .modal {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        width: 90%;
-        max-width: 500px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      body header.toolbar #save-button {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
       }
-      .modal h3 {
-        margin-top: 0;
-        color: #333;
+      /* macOS: the title bar is hidden (hiddenInset), leave room for the traffic lights. */
+      html[data-platform='darwin'] body header.toolbar {
+        padding-left: 84px;
+        padding-right: 84px;
+        min-height: 52px;
       }
-      .modal-buttons {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 20px;
+      body main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 24px 24px;
       }
-      .modal-cancel-btn {
-        background: #e0e0e0;
-        color: #333;
+      body section[data-panel] {
+        max-width: 620px;
+        margin: 0 auto;
       }
-      .modal-cancel-btn:hover {
-        background: #d0d0d0;
+      body section[data-panel][hidden] {
+        display: none;
       }
-      .reset-btn {
-        background: #e0e0e0;
-        color: #333;
-        padding: 6px 14px;
-        font-size: 13px;
+      /* Group title above an inset list */
+      body .group-title {
+        display: block;
+        margin: 18px 0 6px 2px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        opacity: 0.75;
+      }
+      body .group-title:first-child {
         margin-top: 8px;
       }
-      .reset-btn:hover {
-        background: #d0d0d0;
+      /* Inset grouped list */
+      body .group {
+        background: var(--foreground-color);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      body .row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 14px;
+        min-height: 44px;
+        box-sizing: border-box;
+      }
+      body .row + .row {
+        border-top: 1px solid var(--border-color);
+      }
+      body .row.stacked {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      body .row .text {
+        flex: 1;
+        min-width: 0;
+      }
+      body .row .text x-label {
+        display: block;
+      }
+      body .row .hint {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.85em;
+        opacity: 0.6;
+        line-height: 1.35;
+      }
+      body .row .hint a {
+        color: var(--accent-color);
+      }
+      /* Xel widgets ship with max-width: 160px; give controls sensible widths. */
+      body .row > x-input,
+      body .row > x-select {
+        flex: 0 0 300px;
+        max-width: none;
+      }
+      body .row.stacked > x-input,
+      body .row.stacked > x-texteditor,
+      body dialog x-texteditor {
+        width: 100%;
+        max-width: none;
+      }
+      body .row.stacked > x-texteditor {
+        min-height: 140px;
+      }
+      body .row > x-numberinput {
+        width: 110px;
+      }
+      body .row > x-switch,
+      body .row > x-button {
+        flex: none;
+      }
+      body x-notification.error {
+        --background: #c62828;
+      }
+      body dialog {
+        width: min(520px, 90vw);
+      }
+      body dialog h3 {
+        font-size: 1rem;
+        margin: 0 0 12px;
+      }
+      body dialog x-texteditor {
+        min-height: 110px;
       }
     </style>
   </head>
   <body>
-    <div class="tabs">
-      <div class="tab-group">
-        <button class="tab active" onclick="switchTab('api-keys')">API Keys</button>
-        <button class="tab" onclick="switchTab('customization')">Customization</button>
-        <button class="tab" onclick="switchTab('general')">General</button>
-      </div>
-      <button class="save-btn tab-save-btn" id="save-all-btn" onclick="saveAll()">Save</button>
-    </div>
+    <header class="toolbar">
+      <x-tabs id="tabs">
+        <x-tab value="api-keys" toggled><x-label>API Keys</x-label></x-tab>
+        <x-tab value="customization"><x-label>Customization</x-label></x-tab>
+        <x-tab value="general"><x-label>General</x-label></x-tab>
+      </x-tabs>
+      <x-button id="save-button" toggled><x-label>Save</x-label></x-button>
+    </header>
 
-    <div class="content">
-      <div id="api-keys" class="tab-panel active">
-        <div class="container">
-          <h2>API Key Settings</h2>
-
-          <div class="form-group">
-            <label for="anthropic-key">Claude API Key</label>
-            <input type="password" id="anthropic-key" placeholder="sk-ant-api03-..." />
-            <div class="help-text">
-              Get your API key from
-              <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="openai-key">OpenAI API Key</label>
-            <input type="password" id="openai-key" placeholder="sk-..." />
-            <div class="help-text">
-              Get your API key from
-              <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="google-key">Google AI API Key</label>
-            <input type="password" id="google-key" placeholder="AIzaSy..." />
-            <div class="help-text">
-              Get your API key from
-              <a href="https://makersuite.google.com/app/apikey" target="_blank"
-                >makersuite.google.com</a
+    <main>
+      <section data-panel="api-keys">
+        <span class="group-title">API Keys</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Claude</x-label>
+              <span class="hint"
+                ><a href="https://console.anthropic.com/">console.anthropic.com</a></span
               >
             </div>
+            <x-input type="password" data-field="anthropicKey"
+              ><x-label>sk-ant-api03-…</x-label></x-input
+            >
           </div>
-
-          <div class="status" id="api-status"></div>
-        </div>
-      </div>
-
-      <div id="customization" class="tab-panel">
-        <div class="container">
-          <h2>Customization</h2>
-
-          <h3 style="margin-top: 0; margin-bottom: 15px; color: #444; font-size: 16px">
-            Custom Prompt
-          </h3>
-          <div class="form-group">
-            <label for="custom-prompt-input">Additional Instructions for Translation</label>
-            <textarea
-              id="custom-prompt-input"
-              placeholder="Enter custom instructions that will be included in all translations...
-For example:
-- Use formal language
-- Keep product names in English
-- Maintain consistent terminology"
-            ></textarea>
-            <div class="help-text">
-              These instructions will be added to every translation request.
+          <div class="row">
+            <div class="text">
+              <x-label>OpenAI</x-label>
+              <span class="hint"
+                ><a href="https://platform.openai.com/api-keys">platform.openai.com</a></span
+              >
             </div>
-            <button class="generate-btn" id="generate-prompt-btn" onclick="openGenerateModal()">
-              Generate with AI
-            </button>
+            <x-input type="password" data-field="openaiKey"><x-label>sk-…</x-label></x-input>
           </div>
-
-          <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0" />
-
-          <h3 style="margin-top: 0; margin-bottom: 15px; color: #444; font-size: 16px">
-            Custom Model
-          </h3>
-          <div class="form-group">
-            <label for="custom-model-name">Model Name</label>
-            <input
-              type="text"
-              id="custom-model-name"
-              placeholder="gpt-4-1106-preview, claude-3-opus-20240229, etc."
-            />
-            <div class="help-text">Enter the exact model ID/name from your provider</div>
-          </div>
-
-          <div class="form-group">
-            <label for="custom-model-provider">Provider</label>
-            <select id="custom-model-provider">
-              <option value="">Select a provider</option>
-              <option value="anthropic">Claude</option>
-              <option value="openai">OpenAI</option>
-              <option value="google">Google AI</option>
-            </select>
-            <div class="help-text">Select which API provider to use for this model</div>
-          </div>
-
-          <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0" />
-
-          <h3 style="margin-top: 0; margin-bottom: 15px; color: #444; font-size: 16px">
-            Custom Languages
-          </h3>
-          <div class="form-group">
-            <label for="custom-languages-input">Custom Language Names</label>
-            <textarea
-              id="custom-languages-input"
-              placeholder="Enter one language per line...
-For example:
-Esperanto
-Sanskrit
-Klingon
-Ancient Greek"
-            ></textarea>
-            <div class="help-text">
-              Add custom languages that will appear in the language selection menus. Enter one
-              language name per line.
+          <div class="row">
+            <div class="text">
+              <x-label>Google AI</x-label>
+              <span class="hint"
+                ><a href="https://aistudio.google.com/app/apikey">aistudio.google.com</a></span
+              >
             </div>
+            <x-input type="password" data-field="googleKey"><x-label>AIzaSy…</x-label></x-input>
           </div>
-
-          <div class="status" id="customization-status"></div>
         </div>
-      </div>
+      </section>
 
-      <div id="general" class="tab-panel">
-        <div class="container">
-          <h2>General Settings</h2>
-
-          <div class="checkbox-group">
-            <input type="checkbox" id="auto-close-on-blur" />
-            <label for="auto-close-on-blur" class="checkbox-label">
-              Auto-close translation popup when it loses focus
-            </label>
+      <section data-panel="customization" hidden>
+        <span class="group-title">Custom Prompt</span>
+        <div class="group">
+          <div class="row stacked">
+            <div class="text">
+              <x-label>Additional instructions for translation</x-label>
+              <span class="hint">Added to every translation request.</span>
+            </div>
+            <x-texteditor data-field="customPrompt">
+              <x-label>e.g. Use formal language, keep product names in English…</x-label>
+            </x-texteditor>
           </div>
-          <div class="help-text" style="margin-top: -15px; margin-left: 28px">
-            When enabled, the translation popup will automatically close when you click outside of
-            it.
+          <div class="row">
+            <div class="text">
+              <x-label>Generate with AI</x-label>
+              <span class="hint"
+                >Describe what you want and let the selected model write the prompt.</span
+              >
+            </div>
+            <x-button id="open-generate-button"><x-label>Generate…</x-label></x-button>
           </div>
-
-          <div class="checkbox-group" style="margin-top: 20px">
-            <input type="checkbox" id="enable-streaming" />
-            <label for="enable-streaming" class="checkbox-label">
-              Enable streaming for popup translations
-            </label>
-          </div>
-          <div class="help-text" style="margin-top: -15px; margin-left: 28px">
-            When enabled, translation text will appear progressively as the AI generates it (popup
-            mode only).
-          </div>
-
-          <div class="form-group" style="margin-top: 20px">
-            <label for="popup-font-size">Popup Font Size (px)</label>
-            <input
-              type="number"
-              id="popup-font-size"
-              min="10"
-              max="24"
-              step="1"
-              style="width: 120px"
-            />
-            <div class="help-text">Font size for translation text in the popup window (10-24).</div>
-          </div>
-
-          <div class="form-group">
-            <button class="reset-btn" id="reset-popup-size-btn" onclick="resetPopupSize()">
-              Reset Popup Size
-            </button>
-            <div class="help-text">Restore the popup window to its default size (400×200).</div>
-          </div>
-
-          <div class="checkbox-group" style="margin-top: 20px">
-            <input type="checkbox" id="open-at-login" />
-            <label for="open-at-login" class="checkbox-label"> Launch Honyo at login </label>
-          </div>
-          <div class="help-text" style="margin-top: -15px; margin-left: 28px">
-            When enabled, Honyo will automatically start when you log in to your computer.
-          </div>
-
-          <div class="status" id="general-status"></div>
         </div>
-      </div>
-    </div>
 
-    <div class="modal-overlay" id="generate-modal">
-      <div class="modal">
-        <h3>Generate Custom Prompt with AI</h3>
-        <div class="form-group">
-          <label for="generate-instruction">How would you like to modify the prompt?</label>
-          <textarea
-            id="generate-instruction"
-            style="min-height: 100px"
-            placeholder="Describe the changes you want...
-For example:
-- Make translations more casual
-- Add instructions to preserve technical terms
-- Focus on business/formal tone"
-          ></textarea>
+        <span class="group-title">Custom Model</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Model name</x-label>
+              <span class="hint">Exact model ID from your provider.</span>
+            </div>
+            <x-input data-field="customModelName"
+              ><x-label>gpt-5.6-sol, claude-opus-4-8, …</x-label></x-input
+            >
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Provider</x-label>
+            </div>
+            <x-select data-field="customModelProvider">
+              <x-menu>
+                <x-menuitem value="" toggled><x-label>Select a provider</x-label></x-menuitem>
+                <x-menuitem value="anthropic"><x-label>Claude</x-label></x-menuitem>
+                <x-menuitem value="openai"><x-label>OpenAI</x-label></x-menuitem>
+                <x-menuitem value="google"><x-label>Google AI</x-label></x-menuitem>
+              </x-menu>
+            </x-select>
+          </div>
         </div>
-        <div class="modal-buttons">
-          <button class="modal-cancel-btn" onclick="closeGenerateModal()">Cancel</button>
-          <button class="generate-btn" id="modal-generate-btn" onclick="generatePrompt()">
-            Generate
-          </button>
+
+        <span class="group-title">Custom Languages</span>
+        <div class="group">
+          <div class="row stacked">
+            <div class="text">
+              <x-label>Additional languages for the Primary / Secondary menus</x-label>
+              <span class="hint">One language per line.</span>
+            </div>
+            <x-texteditor data-field="customLanguages">
+              <x-label>Esperanto</x-label>
+            </x-texteditor>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <script>
-      const { ipcRenderer } = require('electron');
+      <section data-panel="general" hidden>
+        <span class="group-title">Popup</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Auto-close when it loses focus</x-label>
+              <span class="hint">The popup closes when you click outside of it.</span>
+            </div>
+            <x-switch data-field="autoCloseOnBlur"></x-switch>
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Stream translations</x-label>
+              <span class="hint">Text appears progressively as the AI generates it.</span>
+            </div>
+            <x-switch data-field="enableStreaming"></x-switch>
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Font size</x-label>
+              <span class="hint">10–24 px.</span>
+            </div>
+            <x-numberinput data-field="popupFontSize" min="10" max="24" step="1" suffix=" px">
+              <x-stepper></x-stepper>
+            </x-numberinput>
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Window size</x-label>
+              <span class="hint">Restore the default size (400×200).</span>
+            </div>
+            <x-button id="reset-popup-size-button"><x-label>Reset</x-label></x-button>
+          </div>
+        </div>
 
-      let pendingChanges = {
-        apiKeys: false,
-        customPrompt: false,
-        customModel: false,
-        customLanguages: false,
-        display: false,
-      };
+        <span class="group-title">Startup</span>
+        <div class="group">
+          <div class="row">
+            <div class="text">
+              <x-label>Launch Honyo at login</x-label>
+              <span class="hint">Applied immediately.</span>
+            </div>
+            <x-switch data-field="openAtLogin"></x-switch>
+          </div>
+        </div>
+      </section>
+    </main>
 
-      // Tab switching
-      function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+    <x-notification id="status" timeout="3000"></x-notification>
 
-        event.target.classList.add('active');
-        document.getElementById(tabName).classList.add('active');
-      }
-
-      // Load data on startup
-      window.addEventListener('DOMContentLoaded', () => {
-        ipcRenderer.send('load-api-keys');
-        ipcRenderer.send('load-custom-prompt');
-        ipcRenderer.send('load-custom-model');
-        ipcRenderer.send('load-custom-languages');
-        ipcRenderer.send('load-auto-close-on-blur');
-        ipcRenderer.send('load-open-at-login');
-
-        // Add change listeners
-        document
-          .getElementById('anthropic-key')
-          .addEventListener('input', () => (pendingChanges.apiKeys = true));
-        document
-          .getElementById('openai-key')
-          .addEventListener('input', () => (pendingChanges.apiKeys = true));
-        document
-          .getElementById('google-key')
-          .addEventListener('input', () => (pendingChanges.apiKeys = true));
-        document
-          .getElementById('custom-prompt-input')
-          .addEventListener('input', () => (pendingChanges.customPrompt = true));
-        document
-          .getElementById('custom-model-name')
-          .addEventListener('input', () => (pendingChanges.customModel = true));
-        document
-          .getElementById('custom-model-provider')
-          .addEventListener('change', () => (pendingChanges.customModel = true));
-        document
-          .getElementById('custom-languages-input')
-          .addEventListener('input', () => (pendingChanges.customLanguages = true));
-        document
-          .getElementById('auto-close-on-blur')
-          .addEventListener('change', () => (pendingChanges.display = true));
-        document
-          .getElementById('enable-streaming')
-          .addEventListener('change', () => (pendingChanges.display = true));
-        document
-          .getElementById('popup-font-size')
-          .addEventListener('input', () => (pendingChanges.display = true));
-        document
-          .getElementById('open-at-login')
-          .addEventListener('change', () => saveOpenAtLogin());
-      });
-
-      // API Keys functionality
-      ipcRenderer.on('api-keys-loaded', (event, keys) => {
-        if (keys.anthropic) document.getElementById('anthropic-key').value = keys.anthropic;
-        if (keys.openai) document.getElementById('openai-key').value = keys.openai;
-        if (keys.google) document.getElementById('google-key').value = keys.google;
-      });
-
-      function saveApiKeys() {
-        const keys = {
-          anthropic: document.getElementById('anthropic-key').value.trim(),
-          openai: document.getElementById('openai-key').value.trim(),
-          google: document.getElementById('google-key').value.trim(),
-        };
-
-        ipcRenderer.send('save-api-keys', keys);
-      }
-
-      ipcRenderer.on('api-keys-saved', (event, success) => {
-        if (success) {
-          pendingChanges.apiKeys = false;
-          showStatus('API keys saved successfully!', false);
-        } else {
-          showStatus('Failed to save API keys. Please try again.', true);
-        }
-      });
-
-      // Custom Prompt functionality
-      ipcRenderer.on('custom-prompt-loaded', (event, customPrompt) => {
-        document.getElementById('custom-prompt-input').value = customPrompt || '';
-      });
-
-      function saveCustomPrompt() {
-        const customPrompt = document.getElementById('custom-prompt-input').value.trim();
-        ipcRenderer.send('save-custom-prompt', customPrompt);
-      }
-
-      ipcRenderer.on('custom-prompt-saved', (event, success) => {
-        if (success) {
-          pendingChanges.customPrompt = false;
-          showStatus('Custom prompt saved successfully!', false);
-        } else {
-          showStatus('Failed to save custom prompt. Please try again.', true);
-        }
-      });
-
-      // Custom Model functionality
-      ipcRenderer.on('custom-model-loaded', (event, customModel) => {
-        if (customModel) {
-          document.getElementById('custom-model-name').value = customModel.model || '';
-          document.getElementById('custom-model-provider').value = customModel.provider || '';
-        }
-      });
-
-      function saveCustomModel() {
-        const customModel = {
-          model: document.getElementById('custom-model-name').value.trim(),
-          provider: document.getElementById('custom-model-provider').value,
-        };
-        ipcRenderer.send('save-custom-model', customModel);
-      }
-
-      ipcRenderer.on('custom-model-saved', (event, success) => {
-        if (success) {
-          pendingChanges.customModel = false;
-          showStatus('Custom model saved successfully!', false);
-        } else {
-          showStatus('Failed to save custom model. Please try again.', true);
-        }
-      });
-
-      // Custom Languages functionality
-      ipcRenderer.on('custom-languages-loaded', (event, customLanguages) => {
-        if (customLanguages && customLanguages.length > 0) {
-          document.getElementById('custom-languages-input').value = customLanguages.join('\n');
-        }
-      });
-
-      function saveCustomLanguages() {
-        const input = document.getElementById('custom-languages-input').value.trim();
-        const customLanguages = input
-          .split('\n')
-          .map(lang => lang.trim())
-          .filter(lang => lang.length > 0);
-        ipcRenderer.send('save-custom-languages', customLanguages);
-      }
-
-      ipcRenderer.on('custom-languages-saved', (event, success) => {
-        if (success) {
-          pendingChanges.customLanguages = false;
-          showStatus('Custom languages saved successfully!', false);
-        } else {
-          showStatus('Failed to save custom languages. Please try again.', true);
-        }
-      });
-
-      // Display settings functionality
-      ipcRenderer.on('auto-close-on-blur-loaded', (event, autoCloseOnBlur) => {
-        document.getElementById('auto-close-on-blur').checked = autoCloseOnBlur;
-      });
-
-      ipcRenderer.on('enable-streaming-loaded', (event, enableStreaming) => {
-        document.getElementById('enable-streaming').checked = enableStreaming;
-      });
-
-      ipcRenderer.on('popup-font-size-loaded', (event, popupFontSize) => {
-        document.getElementById('popup-font-size').value = popupFontSize;
-      });
-
-      ipcRenderer.on('open-at-login-loaded', (event, openAtLogin) => {
-        document.getElementById('open-at-login').checked = openAtLogin;
-      });
-
-      function saveOpenAtLogin() {
-        const openAtLogin = document.getElementById('open-at-login').checked;
-        ipcRenderer.send('save-open-at-login', openAtLogin);
-      }
-
-      ipcRenderer.on('open-at-login-saved', (event, success) => {
-        if (success) {
-          showStatus('Launch at login setting saved!', false);
-        } else {
-          showStatus('Failed to save launch at login setting.', true);
-        }
-      });
-
-      function saveDisplaySettings() {
-        const autoCloseOnBlur = document.getElementById('auto-close-on-blur').checked;
-        const enableStreaming = document.getElementById('enable-streaming').checked;
-        let popupFontSize = parseInt(document.getElementById('popup-font-size').value, 10);
-        if (Number.isNaN(popupFontSize)) popupFontSize = 14;
-        popupFontSize = Math.min(24, Math.max(10, popupFontSize));
-        document.getElementById('popup-font-size').value = popupFontSize;
-        ipcRenderer.send('save-display-settings', {
-          autoCloseOnBlur,
-          enableStreaming,
-          popupFontSize,
-        });
-      }
-
-      ipcRenderer.on('display-settings-saved', (event, success) => {
-        if (success) {
-          pendingChanges.display = false;
-          showStatus('Display settings saved successfully!', false);
-        } else {
-          showStatus('Failed to save display settings. Please try again.', true);
-        }
-      });
-
-      function resetPopupSize() {
-        ipcRenderer.send('reset-popup-size');
-      }
-
-      ipcRenderer.on('popup-size-reset', (event, success) => {
-        if (success) {
-          showStatus('Popup size reset to default (400×200).', false);
-        } else {
-          showStatus('Failed to reset popup size. Please try again.', true);
-        }
-      });
-
-      // Save all function
-      function saveAll() {
-        const saveBtn = document.getElementById('save-all-btn');
-        saveBtn.disabled = true;
-
-        if (pendingChanges.apiKeys) {
-          saveApiKeys();
-        }
-        if (pendingChanges.customPrompt) {
-          saveCustomPrompt();
-        }
-        if (pendingChanges.customModel) {
-          saveCustomModel();
-        }
-        if (pendingChanges.customLanguages) {
-          saveCustomLanguages();
-        }
-        if (pendingChanges.display) {
-          saveDisplaySettings();
-        }
-
-        if (
-          !pendingChanges.apiKeys &&
-          !pendingChanges.customPrompt &&
-          !pendingChanges.customModel &&
-          !pendingChanges.customLanguages &&
-          !pendingChanges.display
-        ) {
-          showStatus('No changes to save', false);
-        }
-
-        setTimeout(() => {
-          saveBtn.disabled = false;
-        }, 1000);
-      }
-
-      // Generate prompt modal functions
-      function openGenerateModal() {
-        document.getElementById('generate-modal').classList.add('active');
-        document.getElementById('generate-instruction').value = '';
-        document.getElementById('generate-instruction').focus();
-      }
-
-      function closeGenerateModal() {
-        document.getElementById('generate-modal').classList.remove('active');
-      }
-
-      function generatePrompt() {
-        const instruction = document.getElementById('generate-instruction').value.trim();
-        if (!instruction) {
-          alert('Please enter instructions for how to modify the prompt.');
-          return;
-        }
-
-        const currentPrompt = document.getElementById('custom-prompt-input').value.trim();
-        const generateBtn = document.getElementById('modal-generate-btn');
-        const mainGenerateBtn = document.getElementById('generate-prompt-btn');
-
-        generateBtn.disabled = true;
-        generateBtn.textContent = 'Generating...';
-        mainGenerateBtn.disabled = true;
-
-        ipcRenderer.send('generate-custom-prompt', { currentPrompt, instruction });
-      }
-
-      ipcRenderer.on('custom-prompt-generated', (event, result) => {
-        const generateBtn = document.getElementById('modal-generate-btn');
-        const mainGenerateBtn = document.getElementById('generate-prompt-btn');
-
-        generateBtn.disabled = false;
-        generateBtn.textContent = 'Generate';
-        mainGenerateBtn.disabled = false;
-
-        if (result.success) {
-          document.getElementById('custom-prompt-input').value = result.prompt;
-          pendingChanges.customPrompt = true;
-          closeGenerateModal();
-          showStatus('Custom prompt generated! Click Save to apply.', false);
-        } else {
-          alert('Failed to generate prompt: ' + result.error);
-        }
-      });
-
-      // Status display function
-      function showStatus(message, isError) {
-        // Remove existing statuses
-        document.querySelectorAll('.status').forEach(status => {
-          status.className = 'status';
-          status.textContent = '';
-        });
-
-        // Show status in active tab
-        const activePanel = document.querySelector('.tab-panel.active');
-        const statusEl = activePanel.querySelector('.status');
-        if (statusEl) {
-          statusEl.className = `status ${isError ? 'error' : 'success'}`;
-          statusEl.textContent = message;
-          setTimeout(() => {
-            statusEl.className = 'status';
-            statusEl.textContent = '';
-          }, 3000);
-        }
-      }
-    </script>
+    <dialog id="generate-dialog">
+      <h3>Generate custom prompt with AI</h3>
+      <x-texteditor id="generate-instruction">
+        <x-label>e.g. Make translations more casual, preserve technical terms…</x-label>
+      </x-texteditor>
+      <footer>
+        <x-button id="generate-cancel-button"><x-label>Cancel</x-label></x-button>
+        <x-button id="generate-button" toggled><x-label>Generate</x-label></x-button>
+      </footer>
+    </dialog>
   </body>
 </html>

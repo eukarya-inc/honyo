@@ -12,6 +12,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, statSync, rmSync } from 'fs';
+import { buildRenderer } from './build-renderer.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,6 +31,8 @@ function findTsFiles(dir: string, files: string[] = []): string[] {
     const fullPath = join(dir, entry);
     const stat = statSync(fullPath);
     if (stat.isDirectory()) {
+      // Renderer and preload sources are bundled separately (build-renderer.ts).
+      if (entry === 'renderer' || entry === 'preload') continue;
       findTsFiles(fullPath, files);
     } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts') && !entry.endsWith('.spec.ts')) {
       files.push(fullPath);
@@ -66,6 +69,9 @@ try {
   console.log('Fixing import extensions...');
   await fixImports(buildDir);
   console.log('Import extensions fixed!');
+
+  await buildRenderer();
+  console.log('Renderer/preload bundles built!');
 } catch (error) {
   console.error('Build failed:', error);
   process.exit(1);

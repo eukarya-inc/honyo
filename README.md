@@ -259,7 +259,8 @@ npm start
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Run the app in development mode |
+| `npm start` | Run the app in development mode (bundles preload/renderer first) |
+| `npm run build:renderer` | Bundle only the preload and renderer scripts |
 | `npm test` | Run tests with Vitest |
 | `npm run test:ui` | Run tests with Vitest UI |
 | `npm run typecheck` | Type check with TypeScript |
@@ -271,18 +272,35 @@ npm start
 | `npm run dist:win` | Build and package for Windows |
 | `npm run dist:linux` | Build and package for Linux |
 
+### Development environment variables
+
+| Variable | Effect |
+|----------|--------|
+| `HONYO_USER_DATA_DIR` | Use a separate config/cache directory so a dev instance can run next to an installed Honyo |
+| `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
+| `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB` and `HONYO_THEME=light\|dark`) |
+
 ### Project Structure
 
 ```
 src/
 ├── main.ts              # Entry point
 ├── models.ts            # AI model definitions
+├── models-tier.ts       # Recommended/advanced model classification
 ├── app/                 # App lifecycle, updater, accessibility
 ├── config/              # Configuration management
+├── ipc/                 # Typed IPC contracts shared by main, preload and renderer
 ├── keyboard/            # Keyboard event handling (uiohook-napi)
 ├── language/            # Language detection and constants
+├── preload/             # contextBridge preload scripts (bundled to build/preload)
+├── renderer/            # Browser-side code for windows (bundled to build/renderer)
 ├── translation/         # AI translation (Vercel AI SDK)
-└── ui/                  # Tray, menu, popup, settings windows
+└── ui/                  # Tray, menu, popup, settings windows (main process side)
+
+The settings window is built with [Xel](https://xel-toolkit.org/), a widget toolkit with
+native-looking themes: Cupertino on macOS, Fluent on Windows, Adwaita on Linux, each
+following the system light/dark mode. The renderer runs with context isolation and
+talks to the main process only through the typed API in `src/ipc/settings.ts`.
 ```
 
 ### Tech Stack

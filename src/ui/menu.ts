@@ -26,6 +26,7 @@ import {
 } from '../app/updater.ts';
 import { cancelCurrentTranslation, isCurrentlyTranslating } from '../keyboard/handler.ts';
 import { closePopup } from './popup.ts';
+import { formatAccelerator } from '../keyboard/accelerator.ts';
 
 // Get __dirname in both ESM and CommonJS
 const getCurrentDir = (): string => {
@@ -50,6 +51,15 @@ try {
   console.error('Failed to read package.json version:', error);
 }
 
+// Human-readable description of how a translation is triggered.
+export function describeTranslateTrigger(): string {
+  const shortcuts = getConfig().shortcuts;
+  if (shortcuts?.translateTrigger === 'shortcut' && shortcuts.translateShortcut) {
+    return formatAccelerator(shortcuts.translateShortcut, process.platform);
+  }
+  return process.platform === 'darwin' ? 'Double ⌘C' : 'Double Ctrl+C';
+}
+
 export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: string) => void): Menu {
   const config = getConfig();
   const isPaused = getPausedState();
@@ -66,6 +76,11 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
       type: 'normal',
       enabled: false,
     },
+    {
+      label: `Translate: ${describeTranslateTrigger()}`,
+      type: 'normal',
+      enabled: false,
+    },
     { type: 'separator' },
     {
       label: `Profile: ${listProfiles().find(p => p.id === getActiveProfileId())?.name ?? ''}`,
@@ -74,6 +89,10 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
           label: profile.name,
           type: 'radio' as const,
           checked: profile.id === getActiveProfileId(),
+          // Display only: the shortcut itself is registered via globalShortcut.
+          ...(profile.shortcut
+            ? { accelerator: profile.shortcut, registerAccelerator: false }
+            : {}),
           click: (): void => {
             // setActiveProfile triggers the profile-changed callback, which
             // rebuilds this menu with the new languages/model.

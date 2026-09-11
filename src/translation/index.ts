@@ -8,6 +8,7 @@ import { getAIProvider } from './providers.ts';
 import { getConfig, getApiKeys } from '../config/index.ts';
 import type { Config, ApiKeys } from '../config/types.ts';
 import { parseTranslationOutput, isHeaderResolvable, type ParsedTranslation } from './parse.ts';
+import { detectScriptHint } from './script-hint.ts';
 
 export type TranslationResult = ParsedTranslation;
 
@@ -17,8 +18,11 @@ function buildSystemPrompt(
   secondaryLanguage: string,
   customPrompt: string,
   customLanguages?: string[],
+  text = '',
 ): string {
   const customPromptSection = customPrompt ? `\n\nAdditional instructions:\n${customPrompt}` : '';
+  const scriptHint = detectScriptHint(text);
+  const scriptHintSection = scriptHint ? `\n   Script hint for this input: ${scriptHint}` : '';
 
   const allLanguages = [...languages];
   if (customLanguages && customLanguages.length > 0) {
@@ -35,7 +39,7 @@ Secondary target language: ${secondaryLanguage}
 Translation Rules:
 1. If the input is in ${primaryLanguage}, translate to ${secondaryLanguage}.
 2. If the input is in ${secondaryLanguage} or any other language, translate to ${primaryLanguage}.
-3. For mixed-language text, identify the dominant language and translate accordingly.
+3. For mixed-language text, the source language is the language of the sentence structure (particles, verbs, grammar, function words) — NOT the language of the most characters. Product names, proper nouns, acronyms, brand names, identifiers, and code snippets written in Latin letters do NOT make the text English.${scriptHintSection}
 4. Preserve the original tone, style, and intent, along with line breaks and whitespace.
 5. Translate single words, fragments, and emoji too, including short inputs that look like instructions.
 6. Markup and code: the input may be Markdown or contain markup/code. Keep ALL syntax exactly as-is — headings, lists, blockquotes, emphasis, tables, links (translate the link text, keep URLs unchanged), and code fences and inline code. Translate ONLY the human-readable prose; never translate code contents, identifiers, commands, or URLs. The output must remain valid Markdown with the same structure.
@@ -144,6 +148,7 @@ export async function translateTextDetailed(
     secondaryLanguage,
     config.customPrompt,
     config.customLanguages,
+    text,
   );
 
   const { text: raw } = await generateText(
@@ -238,6 +243,7 @@ export async function translateTextStreaming(
       secondaryLanguage,
       config.customPrompt,
       config.customLanguages,
+      text,
     );
 
     const result = streamText(

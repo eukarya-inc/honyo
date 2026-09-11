@@ -121,6 +121,7 @@ describe('normalizeStore', () => {
       defaults,
     );
     expect(store.profiles[0]?.providers.google).toEqual({ apiKey: '' });
+    expect(store.profiles[0]?.providers.xai).toEqual({ apiKey: '' });
   });
 });
 

@@ -27,7 +27,7 @@ describe('AI Models', () => {
         expect(model).toHaveProperty('name');
         expect(model).toHaveProperty('provider');
         expect(model).toHaveProperty('model');
-        expect(['anthropic', 'openai', 'google']).toContain(model.provider);
+        expect(['anthropic', 'openai', 'google', 'xai']).toContain(model.provider);
       });
     });
   });

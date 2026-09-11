@@ -207,6 +207,7 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
             anthropic: [],
             openai: [],
             google: [],
+            xai: [],
           };
           for (const [modelId, modelInfo] of Object.entries(getAvailableModels())) {
             if (classifyModelTier(modelInfo) === tier) {

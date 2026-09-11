@@ -45,7 +45,8 @@ function mapSecrets(store: StoredConfig, fn: (v: string) => string): StoredConfi
     profiles: store.profiles.map(p => {
       const providers = { ...p.providers };
       for (const id of PROVIDER_IDS) {
-        const entry = providers[id];
+        // Files written before a provider existed lack its entry.
+        const entry = providers[id] ?? { apiKey: '' };
         providers[id] = { ...entry, apiKey: fn(entry.apiKey ?? '') };
       }
       return { ...p, providers };

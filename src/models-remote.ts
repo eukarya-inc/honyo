@@ -12,9 +12,17 @@ import {
 import { limitModels } from './models-filter.ts';
 import { pickDefaultModelKey } from './models-tier.ts';
 
-type Provider = 'anthropic' | 'openai' | 'google';
+type Provider = 'anthropic' | 'openai' | 'google' | 'xai';
 
-const PROVIDERS: Provider[] = ['anthropic', 'openai', 'google'];
+const PROVIDERS: Provider[] = ['anthropic', 'openai', 'google', 'xai'];
+
+// OpenRouter uses "x-ai" as the xAI slug prefix.
+const OPENROUTER_PREFIX: Record<string, Provider> = {
+  anthropic: 'anthropic',
+  openai: 'openai',
+  google: 'google',
+  'x-ai': 'xai',
+};
 
 interface ModelsCache {
   fetchedAt: number;
@@ -86,6 +94,7 @@ const EXCLUDE_ID = [
   'audio',
   'video',
   'omni',
+  'imagine',
 ];
 
 function isTextChatModel(id: string, outputs: string[]): boolean {
@@ -166,19 +175,21 @@ async function fetchFromOpenRouter(): Promise<FetchResult> {
     anthropic: [],
     openai: [],
     google: [],
+    xai: [],
   };
   const seen: Record<Provider, Set<string>> = {
     anthropic: new Set(),
     openai: new Set(),
     google: new Set(),
+    xai: new Set(),
   };
 
   for (const it of data) {
     if (!it?.id) continue;
     const slash = it.id.indexOf('/');
     if (slash < 0) continue;
-    const prov = it.id.slice(0, slash) as Provider;
-    if (!PROVIDERS.includes(prov)) continue;
+    const prov = OPENROUTER_PREFIX[it.id.slice(0, slash)];
+    if (!prov) continue;
 
     let id = it.id.slice(slash + 1);
     const colon = id.indexOf(':');

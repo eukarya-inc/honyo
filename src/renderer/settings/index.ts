@@ -127,7 +127,9 @@ function setupShortcutRecorders(): void {
 function collectPatch(): SettingsPatch {
   const patch: SettingsPatch = {};
   if (!loaded) return patch;
+  const locked = new Set(loaded.managedFields);
   for (const [key, el] of fields) {
+    if (locked.has(key)) continue;
     const value = readField(el);
     if (value !== loaded[key]) {
       (patch as Record<string, FieldValue>)[key] = value;
@@ -316,6 +318,25 @@ function setupProfiles(): void {
 
 // --- Form ----------------------------------------------------------------------
 
+// Fields enforced by the organisation (MDM) are shown but cannot be edited.
+function applyManagedLocks(managedFields: string[]): void {
+  const locked = new Set(managedFields);
+  for (const [key, el] of fields) {
+    const isLocked = locked.has(key);
+    el.toggleAttribute('disabled', isLocked);
+    const row = el.closest<HTMLElement>('.row');
+    const badge = row?.querySelector<HTMLElement>('.managed-badge');
+    if (isLocked && row && !badge) {
+      const span = document.createElement('span');
+      span.className = 'hint managed-badge';
+      span.textContent = 'Managed by your organization';
+      row.querySelector('.text')?.append(span);
+    } else if (!isLocked && badge) {
+      badge.remove();
+    }
+  }
+}
+
 async function loadIntoForm(): Promise<void> {
   loaded = await window.honyo.load();
   // Menus must exist before a select's value can be applied.
@@ -323,6 +344,7 @@ async function loadIntoForm(): Promise<void> {
   for (const [key, el] of fields) {
     writeField(el, loaded[key]);
   }
+  applyManagedLocks(loaded.managedFields);
   renderProfileMenu(loaded.profiles, loaded.activeProfileId);
 }
 

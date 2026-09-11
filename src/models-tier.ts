@@ -26,7 +26,7 @@ import type { AIModelInfo } from './models.ts';
  */
 export type ModelTier = 'recommended' | 'advanced';
 
-const LIGHT_MARKERS = ['haiku', 'sonnet', 'mini', 'nano', 'flash', 'lite'];
+const LIGHT_MARKERS = ['haiku', 'sonnet', 'mini', 'nano', 'flash', 'lite', 'fast'];
 const HEAVY_MARKERS = [
   'opus',
   'fable',
@@ -39,6 +39,8 @@ const HEAVY_MARKERS = [
   'research',
   'codex',
   'preview',
+  'build',
+  'agent',
 ];
 
 // Split an id/name into lowercase word tokens so "gpt-5.6-sol" does not
@@ -62,6 +64,8 @@ export function classifyModelTier(info: AIModelInfo): ModelTier {
   const id = info.model.toLowerCase();
   const words = new Set([...tokens(info.model), ...tokens(info.name)]);
 
+  // xAI ships explicit "non-reasoning" variants: cheap and fast.
+  if (id.includes('non-reasoning')) return 'recommended';
   if (LIGHT_MARKERS.some(w => words.has(w))) return 'recommended';
   if (HEAVY_MARKERS.some(w => words.has(w))) return 'advanced';
 

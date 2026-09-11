@@ -1,9 +1,10 @@
-export type ProviderId = 'anthropic' | 'openai' | 'google';
+export type ProviderId = 'anthropic' | 'openai' | 'google' | 'xai';
 
 export interface ApiKeys {
   anthropic: string;
   openai: string;
   google: string;
+  xai: string;
 }
 
 export type DisplayMode = 'notification' | 'popup';

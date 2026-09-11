@@ -1,6 +1,6 @@
 export interface AIModelInfo {
   name: string;
-  provider: 'anthropic' | 'openai' | 'google';
+  provider: 'anthropic' | 'openai' | 'google' | 'xai';
   model: string;
 }
 
@@ -97,6 +97,17 @@ export const AI_MODELS: Record<string, AIModelInfo> = {
     provider: 'google',
     name: 'Gemini 2.5 Flash',
     model: 'gemini-2.5-flash',
+  },
+  // xAI Grok models (latest first)
+  'grok-4.6': {
+    provider: 'xai',
+    name: 'Grok 4.6',
+    model: 'grok-4.6',
+  },
+  'grok-4.20-non-reasoning': {
+    provider: 'xai',
+    name: 'Grok 4.20 (Non-Reasoning)',
+    model: 'grok-4.20-0309-non-reasoning',
   },
 };
 

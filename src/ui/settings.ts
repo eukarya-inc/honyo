@@ -19,7 +19,10 @@ import {
   deleteProfile,
   setProfileShortcut,
   notifyConfigChanged,
+  getManagedFields,
   type Config,
+  type ApiKeys,
+  type ProviderId,
 } from '../config/index.ts';
 import { languages } from '../language/constants.ts';
 import { clearHistory } from '../history/index.ts';
@@ -154,7 +157,7 @@ function modelOptions(): ModelOption[] {
     { id: DEFAULT_MODEL_KEY, name: `Default (${defaultName})`, group: 'default' },
   ];
   const advanced: ModelOption[] = [];
-  for (const provider of ['anthropic', 'openai', 'google'] as const) {
+  for (const provider of ['anthropic', 'openai', 'google', 'xai'] as const) {
     for (const [id, info] of Object.entries(getAvailableModels())) {
       if (info.provider !== provider) continue;
       if (classifyModelTier(info) === 'recommended') {
@@ -176,6 +179,7 @@ function snapshot(): SettingsSnapshot {
   return {
     profiles: listProfiles(),
     activeProfileId: getActiveProfileId(),
+    managedFields: getManagedFields(),
     languageOptions: [...languages, ...(config.customLanguages ?? [])],
     modelOptions: modelOptions(),
     targetLanguage: config.targetLanguage,
@@ -189,9 +193,11 @@ function snapshot(): SettingsSnapshot {
     anthropicKey: keys.anthropic ?? '',
     openaiKey: keys.openai ?? '',
     googleKey: keys.google ?? '',
+    xaiKey: keys.xai ?? '',
     anthropicBaseUrl: providers.anthropic.baseUrl ?? '',
     openaiBaseUrl: providers.openai.baseUrl ?? '',
     googleBaseUrl: providers.google.baseUrl ?? '',
+    xaiBaseUrl: providers.xai.baseUrl ?? '',
     customPrompt: config.customPrompt ?? '',
     customModelName: config.customModel?.model ?? '',
     customModelProvider: config.customModel?.provider ?? '',
@@ -205,16 +211,18 @@ function snapshot(): SettingsSnapshot {
 }
 
 function applyPatch(patch: SettingsPatch): void {
-  const keyUpdates: Partial<{ anthropic: string; openai: string; google: string }> = {};
+  const keyUpdates: Partial<ApiKeys> = {};
   if (patch.anthropicKey !== undefined) keyUpdates.anthropic = patch.anthropicKey.trim();
   if (patch.openaiKey !== undefined) keyUpdates.openai = patch.openaiKey.trim();
   if (patch.googleKey !== undefined) keyUpdates.google = patch.googleKey.trim();
+  if (patch.xaiKey !== undefined) keyUpdates.xai = patch.xaiKey.trim();
   if (Object.keys(keyUpdates).length > 0) updateApiKeys(keyUpdates);
 
-  const baseUrls: Partial<{ anthropic: string; openai: string; google: string }> = {};
+  const baseUrls: Partial<Record<ProviderId, string>> = {};
   if (patch.anthropicBaseUrl !== undefined) baseUrls.anthropic = patch.anthropicBaseUrl;
   if (patch.openaiBaseUrl !== undefined) baseUrls.openai = patch.openaiBaseUrl;
   if (patch.googleBaseUrl !== undefined) baseUrls.google = patch.googleBaseUrl;
+  if (patch.xaiBaseUrl !== undefined) baseUrls.xai = patch.xaiBaseUrl;
   if (Object.keys(baseUrls).length > 0) updateProviderBaseUrls(baseUrls);
 
   const updates: Partial<Config> = {};

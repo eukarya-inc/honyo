@@ -2,7 +2,7 @@
 // This file must stay free of electron/node imports: it is bundled into the
 // renderer and the preload script as well as used by the main process.
 
-export type ProviderId = 'anthropic' | 'openai' | 'google';
+export type ProviderId = 'anthropic' | 'openai' | 'google' | 'xai';
 
 export interface ProfileSummary {
   id: string;
@@ -18,6 +18,7 @@ export type ModelOptionGroup =
   | 'anthropic'
   | 'openai'
   | 'google'
+  | 'xai'
   | 'advanced'
   | 'custom';
 
@@ -38,6 +39,8 @@ export type DisplayMode = 'notification' | 'popup';
 export interface SettingsSnapshot {
   profiles: ProfileSummary[];
   activeProfileId: string;
+  /** Snapshot keys enforced by the organisation (MDM); shown read-only. */
+  managedFields: string[];
   /** Choices for the language and model selects (built-in + custom). */
   languageOptions: string[];
   modelOptions: ModelOption[];
@@ -53,9 +56,11 @@ export interface SettingsSnapshot {
   anthropicKey: string;
   openaiKey: string;
   googleKey: string;
+  xaiKey: string;
   anthropicBaseUrl: string;
   openaiBaseUrl: string;
   googleBaseUrl: string;
+  xaiBaseUrl: string;
   customPrompt: string;
   customModelName: string;
   customModelProvider: ProviderId | '';
@@ -70,7 +75,10 @@ export interface SettingsSnapshot {
 
 /** Keys the form edits; profile metadata is managed through the profile API. */
 export type SettingsPatch = Partial<
-  Omit<SettingsSnapshot, 'profiles' | 'activeProfileId' | 'languageOptions' | 'modelOptions'>
+  Omit<
+    SettingsSnapshot,
+    'profiles' | 'activeProfileId' | 'languageOptions' | 'modelOptions' | 'managedFields'
+  >
 >;
 
 export interface GeneratePromptRequest {

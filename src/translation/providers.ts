@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createXai } from '@ai-sdk/xai';
 import type { LanguageModel } from 'ai';
 import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
@@ -38,6 +39,8 @@ export function getAIProvider(
         return createOpenAI({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
       case 'google':
         return createGoogleGenerativeAI({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
+      case 'xai':
+        return createXai({ apiKey, ...baseURL(baseUrls, p) })(customModel.model);
     }
 
     throw new Error('Unknown provider');
@@ -61,6 +64,8 @@ export function getAIProvider(
       return createOpenAI({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
     case 'google':
       return createGoogleGenerativeAI({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
+    case 'xai':
+      return createXai({ apiKey, ...baseURL(baseUrls, p) })(modelInfo.model);
   }
 
   throw new Error('Unknown provider');

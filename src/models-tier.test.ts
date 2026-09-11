@@ -39,6 +39,14 @@ describe('classifyModelTier', () => {
     expect(classifyModelTier(m('google', 'gemini-3.1-pro-preview'))).toBe('advanced');
   });
 
+  it('classifies xAI Grok variants', () => {
+    expect(classifyModelTier(m('xai', 'grok-4.20-0309-non-reasoning'))).toBe('recommended');
+    expect(classifyModelTier(m('xai', 'grok-4-fast'))).toBe('recommended');
+    expect(classifyModelTier(m('xai', 'grok-4.6'))).toBe('recommended');
+    expect(classifyModelTier(m('xai', 'grok-4.20-0309-reasoning'))).toBe('advanced');
+    expect(classifyModelTier(m('xai', 'grok-build-0.1'))).toBe('advanced');
+  });
+
   it('uses the display name as well as the id', () => {
     expect(classifyModelTier(m('openai', 'some-id', 'Something Mini'))).toBe('recommended');
     expect(classifyModelTier(m('google', 'some-id', 'Something Ultra'))).toBe('advanced');
@@ -53,7 +61,7 @@ describe('classifyModelTier', () => {
   });
 
   it('keeps at least one recommended model per provider in the static list', () => {
-    for (const provider of ['anthropic', 'openai', 'google'] as const) {
+    for (const provider of ['anthropic', 'openai', 'google', 'xai'] as const) {
       const rec = Object.values(AI_MODELS).filter(
         i => i.provider === provider && classifyModelTier(i) === 'recommended',
       );

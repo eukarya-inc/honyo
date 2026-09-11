@@ -137,6 +137,10 @@
         opacity: 0.6;
         line-height: 1.35;
       }
+      body .row .managed-badge {
+        color: var(--accent-color);
+        opacity: 0.9;
+      }
       body .row .hint a {
         color: var(--accent-color);
       }
@@ -231,6 +235,13 @@
             </div>
             <x-input type="password" data-field="googleKey"><x-label>AIzaSy…</x-label></x-input>
           </div>
+          <div class="row">
+            <div class="text">
+              <x-label>xAI</x-label>
+              <span class="hint"><a href="https://console.x.ai/">console.x.ai</a></span>
+            </div>
+            <x-input type="password" data-field="xaiKey"><x-label>xai-…</x-label></x-input>
+          </div>
         </div>
 
         <span class="group-title">Endpoints</span>
@@ -259,6 +270,12 @@
             <x-input data-field="googleBaseUrl"
               ><x-label>https://generativelanguage.googleapis.com/v1beta</x-label></x-input
             >
+          </div>
+          <div class="row">
+            <div class="text">
+              <x-label>xAI base URL</x-label>
+            </div>
+            <x-input data-field="xaiBaseUrl"><x-label>https://api.x.ai/v1</x-label></x-input>
           </div>
         </div>
         <span class="hint footnote">
@@ -343,6 +360,7 @@
                 <x-menuitem value="anthropic"><x-label>Claude</x-label></x-menuitem>
                 <x-menuitem value="openai"><x-label>OpenAI</x-label></x-menuitem>
                 <x-menuitem value="google"><x-label>Google AI</x-label></x-menuitem>
+                <x-menuitem value="xai"><x-label>xAI</x-label></x-menuitem>
               </x-menu>
             </x-select>
           </div>

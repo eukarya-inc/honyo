@@ -11,7 +11,7 @@ import type {
   StoredConfig,
 } from './types.ts';
 
-export const PROVIDER_IDS: ProviderId[] = ['anthropic', 'openai', 'google'];
+export const PROVIDER_IDS: ProviderId[] = ['anthropic', 'openai', 'google', 'xai'];
 
 export const DEFAULT_PROFILE_NAME = 'Default';
 
@@ -40,6 +40,7 @@ export function emptyProviders(keys?: Partial<ApiKeys>): Profile['providers'] {
     anthropic: { apiKey: keys?.anthropic ?? '' },
     openai: { apiKey: keys?.openai ?? '' },
     google: { apiKey: keys?.google ?? '' },
+    xai: { apiKey: keys?.xai ?? '' },
   };
 }
 

@@ -5,6 +5,7 @@ import { getModelInfo } from '../models-remote.ts';
 import { getLanguageFromLocale } from '../language/index.ts';
 import { LANGUAGES } from '../language/constants.ts';
 import { loadStoredConfig, saveStoredConfig } from './storage.ts';
+import { loadManagedConfig, EMPTY_MANAGED, type ManagedConfig } from './managed.ts';
 import {
   buildProfile,
   duplicateProfile,
@@ -27,6 +28,7 @@ loadEnv();
 
 // Global state
 let store: StoredConfig;
+let managed: ManagedConfig = EMPTY_MANAGED;
 let isPaused = false;
 const changeListeners: Array<() => void> = [];
 
@@ -35,6 +37,7 @@ const envApiKeys: ApiKeys = {
   anthropic: process.env.ANTHROPIC_API_KEY || '',
   openai: process.env.OPENAI_API_KEY || '',
   google: process.env.GOOGLE_API_KEY || '',
+  xai: process.env.XAI_API_KEY || '',
 };
 
 function getDefaultConfig(): Config {
@@ -75,6 +78,7 @@ function activeProfile(): Profile {
 export function initializeConfig(): void {
   const defaults = getDefaultConfig();
   store = loadStoredConfig(defaults);
+  managed = loadManagedConfig();
 
   for (const profile of store.profiles) {
     // Check settings consistency
@@ -98,9 +102,29 @@ export function initializeConfig(): void {
   isPaused = store.isPaused === true;
 }
 
-/** Flat view: global settings merged with the active profile. */
+/** Flat view: global settings merged with the active profile (and managed overrides). */
 export function getConfig(): Config {
   return { ...toFlatConfig(store, activeProfile()), isPaused };
+}
+
+// --- Managed (MDM) settings -----------------------------------------------------
+
+export function getManagedConfig(): ManagedConfig {
+  return managed;
+}
+
+/**
+ * Settings-snapshot field names whose values are enforced by the
+ * organisation, so the settings window can show them read-only.
+ */
+export function getManagedFields(): string[] {
+  const fields: string[] = [];
+  for (const id of PROVIDER_IDS) {
+    const p = managed.providers[id];
+    if (p?.apiKey) fields.push(`${id}Key`);
+    if (p?.baseUrl) fields.push(`${id}BaseUrl`);
+  }
+  return fields;
 }
 
 /** Update flat settings; profile-scoped keys go to the active profile. */
@@ -133,11 +157,18 @@ export function saveConfig(): void {
 
 export function getApiKeys(): ApiKeys {
   const providers = activeProfile().providers;
-  return {
+  const keys: ApiKeys = {
     anthropic: providers.anthropic.apiKey || envApiKeys.anthropic,
     openai: providers.openai.apiKey || envApiKeys.openai,
     google: providers.google.apiKey || envApiKeys.google,
+    xai: providers.xai.apiKey || envApiKeys.xai,
   };
+  // Managed keys win over anything the user entered.
+  for (const id of PROVIDER_IDS) {
+    const managedKey = managed.providers[id]?.apiKey;
+    if (managedKey) keys[id] = managedKey;
+  }
+  return keys;
 }
 
 export function updateApiKeys(updates: Partial<ApiKeys>): void {
@@ -150,7 +181,20 @@ export function updateApiKeys(updates: Partial<ApiKeys>): void {
 }
 
 export function getProviderSettings(): Record<ProviderId, ProviderSettings> {
-  return structuredClone(activeProfile().providers);
+  const providers = structuredClone(activeProfile().providers);
+  for (const id of PROVIDER_IDS) {
+    const m = managed.providers[id];
+    if (!m) continue;
+    providers[id] = {
+      apiKey: m.apiKey ?? providers[id].apiKey,
+      ...(m.baseUrl
+        ? { baseUrl: m.baseUrl }
+        : providers[id].baseUrl
+          ? { baseUrl: providers[id].baseUrl }
+          : {}),
+    };
+  }
+  return providers;
 }
 
 export function updateProviderBaseUrls(updates: Partial<Record<ProviderId, string>>): void {

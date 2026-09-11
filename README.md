@@ -13,7 +13,7 @@
 
 - ⚡ **Instant Translation** - Double Ctrl/Cmd+C to translate any selected text
 - 🌍 **Multi-Language Support** - 26 built-in languages plus custom language support
-- 🤖 **Auto-Updating AI Models** - Claude, GPT, Gemini, and custom models, with the model list kept up to date automatically
+- 🤖 **Auto-Updating AI Models** - Claude, GPT, Gemini, Grok (xAI), and custom models, with the model list kept up to date automatically
 - 🔁 **Back-Translation** - Instantly check quality by translating the result back to the source language
 - 🧭 **Language Direction Display** - See the detected source → target language at a glance
 - 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
@@ -22,6 +22,7 @@
 - 🕘 **History** - Recent results in the tray menu (Clipy-style), click to copy; can be disabled or cleared
 - 👤 **Profiles** - Keep separate sets of languages, models, prompts and API keys (personal, work, per-client) and switch from the tray
 - 🔐 **Encrypted keys & custom endpoints** - API keys are stored with the OS keychain; each provider can point at a gateway or proxy
+- 🏢 **Managed deployment** - IT can push provider keys and gateway endpoints via MDM (macOS profiles, Windows policies, or a JSON file); users see them locked
 - 🪶 **Lightweight** - Minimal resource usage, lives in your system tray
 
 ## Installation
@@ -89,7 +90,7 @@ To use the translation features, you need to configure API keys for your preferr
 
 1. Click on the system tray icon
 2. Select "Settings..."
-3. In the "API Keys" tab, enter your API keys for the providers you want to use:
+3. In the "API Keys" tab, enter your API keys for the providers you want to use (Anthropic, OpenAI, Google AI, xAI):
    - **Anthropic**: Get your key from [console.anthropic.com](https://console.anthropic.com/)
    - **OpenAI**: Get your key from [platform.openai.com](https://platform.openai.com/api-keys)
    - **Google AI**: Get your key from [makersuite.google.com](https://makersuite.google.com/app/apikey)
@@ -160,6 +161,37 @@ act as a fallback when a profile has no key.
 
 Each provider also accepts an optional **base URL** (Settings → API Keys → Endpoints) so
 requests can be routed through an LLM gateway or proxy instead of the provider's public API.
+
+### Managed deployment (MDM)
+
+Organisations can supply provider settings centrally instead of handing keys to each
+user. Honyo reads, in this order (later wins), and **enforces** whatever it finds:
+
+| Platform | Source |
+|----------|--------|
+| Any | `managed.json` — macOS `/Library/Application Support/Honyo/managed.json`, Windows `%ProgramData%\Honyo\managed.json`, Linux `/etc/honyo/managed.json` |
+| macOS | Configuration profile for the preference domain `com.rot1024.honyo` (`/Library/Managed Preferences/com.rot1024.honyo.plist`, or the per-user variant) |
+| Windows | Registry policy `HKLM\SOFTWARE\Policies\Honyo` (then `HKCU`), nested keys as subkeys |
+
+Schema (all keys optional):
+
+```json
+{
+  "providers": {
+    "anthropic": { "apiKey": "sk-ant-…", "baseUrl": "https://llm-gateway.example.com/anthropic" },
+    "openai":    { "baseUrl": "https://llm-gateway.example.com/openai" },
+    "google":    { "apiKey": "…" },
+    "xai":       { "baseUrl": "https://llm-gateway.example.com/xai" }
+  }
+}
+```
+
+Managed values override the user's profiles for every profile, and the matching fields in
+Settings → API Keys are shown read-only with a "Managed by your organization" note. Typical
+use is to point `baseUrl` at an internal LLM gateway that holds the real provider keys, so
+nothing secret has to reach the endpoint machines. A Windows policy is expressed as
+`HKLM\SOFTWARE\Policies\Honyo\providers\anthropic` with string values `apiKey` / `baseUrl`;
+a macOS profile carries the same nested dictionary under the `providers` key.
 
 ### Custom Instructions
 
@@ -282,6 +314,7 @@ You can also set API keys via environment variables:
 - `ANTHROPIC_API_KEY`
 - `OPENAI_API_KEY`
 - `GOOGLE_API_KEY`
+- `XAI_API_KEY`
 
 Create a `.env` file in the project root:
 ```env
@@ -335,6 +368,7 @@ npm start
 | `HONYO_USER_DATA_DIR` | Use a separate config/cache directory so a dev instance can run next to an installed Honyo |
 | `HONYO_OPEN_SETTINGS=1` | Open the settings window on launch |
 | `HONYO_THEME_PLATFORM=win32\|linux` | Preview another OS's settings theme (Fluent / Adwaita) |
+| `HONYO_MANAGED_JSON=path` | Read managed (MDM) settings from this file instead of the system location |
 | `HONYO_DEBUG_ECHO=text` | Run a no-network echo action through the popup/notification and history pipeline, then quit |
 | `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB`, `HONYO_SETTINGS_SCREENSHOT_SCRIPT` to run JS first, and `HONYO_THEME=light\|dark`) |

@@ -108,11 +108,11 @@ function initialize(): void {
         id: 'echo',
         name: 'Echo',
         accepts: ['text'],
-        run: async (input, ctx) => {
+        run: (input, ctx) => {
           const text = input.kind === 'text' ? `echo: ${input.text}` : '';
           ctx.onMeta?.({ sourceLanguage: 'Test', targetLanguage: 'Echo' });
           ctx.onChunk?.(text);
-          return { text };
+          return Promise.resolve({ text });
         },
       });
       void runAction('echo', { kind: 'text', text: echoText }).then(() => {

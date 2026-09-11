@@ -1,6 +1,6 @@
 ---
 name: update-ai-models
-description: Search the web for the latest AI models from Anthropic, OpenAI, and Google, then update src/models.ts with new model IDs. Use when user asks to update or add AI models.
+description: Search the web for the latest AI models from Anthropic, OpenAI, Google, and xAI, then update src/models.ts with new model IDs. Use when user asks to update or add AI models.
 ---
 
 # Update AI Models

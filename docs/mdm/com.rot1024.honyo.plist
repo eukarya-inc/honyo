@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Honyo managed settings — bare preference plist for MDMs that take a
+  domain + plist pair (Jamf "Application & Custom Settings → Upload",
+  Intune "Preference file"). Preference domain: com.rot1024.honyo
+-->
+<dict>
+  <key>providers</key>
+  <dict>
+    <key>anthropic</key>
+    <dict>
+      <key>apiKey</key>
+      <string>sk-ant-REPLACE-ME</string>
+      <key>baseUrl</key>
+      <string>https://llm-gateway.example.com/anthropic</string>
+    </dict>
+    <key>openai</key>
+    <dict>
+      <key>baseUrl</key>
+      <string>https://llm-gateway.example.com/openai</string>
+    </dict>
+  </dict>
+</dict>
+</plist>

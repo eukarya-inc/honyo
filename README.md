@@ -191,7 +191,8 @@ Settings → API Keys are shown read-only with a "Managed by your organization" 
 use is to point `baseUrl` at an internal LLM gateway that holds the real provider keys, so
 nothing secret has to reach the endpoint machines. A Windows policy is expressed as
 `HKLM\SOFTWARE\Policies\Honyo\providers\anthropic` with string values `apiKey` / `baseUrl`;
-a macOS profile carries the same nested dictionary under the `providers` key.
+a macOS profile carries the same nested dictionary under the `providers` key. Ready-made
+profile files and MDM-specific steps are in [`docs/mdm/`](docs/mdm/README.md).
 
 ### Custom Instructions
 

@@ -58,6 +58,9 @@ export function showToast({ title, body }: Notice): void {
       minimizable: false,
       maximizable: false,
       focusable: false,
+      // A non-activating panel on macOS: showing it must not take focus from
+      // the popup (which closes on blur) or from the app the user is in.
+      ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
       skipTaskbar: true,
       alwaysOnTop: true,
       hasShadow: false,

@@ -151,8 +151,10 @@ function backTranslate(): void {
   window.honyoPopup.backTranslate(currentTranslation);
 }
 
+// Copy what is on screen: the back-translation while it is shown.
 function copyTranslation(): void {
-  if (currentTranslation) window.honyoPopup.copyTranslation(currentTranslation);
+  const text = view === 'back' && backTranslation ? backTranslation : currentTranslation;
+  if (text) window.honyoPopup.copyTranslation(text);
 }
 
 function closePopup(): void {
@@ -221,9 +223,16 @@ popup.on('translation-chunk', text => {
 });
 
 popup.on('translation-complete', text => {
+  // Usually chunks came first, but a fast result can arrive as "complete"
+  // alone (re-delivered after the page loaded): make sure it is shown.
+  const wasStreaming = isStreaming;
   isStreaming = false;
   currentTranslation = text;
-  if (view === 'translation') translationText().textContent = text;
+  if (!wasStreaming) {
+    showContent();
+    resetBackState();
+    renderView();
+  } else if (view === 'translation') translationText().textContent = text;
   copyButton().disabled = false;
   updateBackButtonState();
 });

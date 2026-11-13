@@ -1,5 +1,5 @@
 import { Notification } from 'electron';
-import { generateText, streamText } from 'ai';
+import { APICallError, generateText, streamText } from 'ai';
 import type { LanguageModel } from 'ai';
 import { CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
@@ -169,13 +169,13 @@ export async function translateTextDetailed(
     signal
       ? {
           model,
-          system: systemPrompt,
+          instructions: systemPrompt,
           prompt: text,
           abortSignal: signal,
         }
       : {
           model,
-          system: systemPrompt,
+          instructions: systemPrompt,
           prompt: text,
         },
   );
@@ -288,14 +288,14 @@ export async function translateTextStreamingStrict(
     signal
       ? {
           model,
-          system: systemPrompt,
+          instructions: systemPrompt,
           prompt: text,
           abortSignal: signal,
           onError,
         }
       : {
           model,
-          system: systemPrompt,
+          instructions: systemPrompt,
           prompt: text,
           onError,
         },
@@ -325,7 +325,13 @@ export async function translateTextStreamingStrict(
   }
 
   if (streamError !== undefined) {
-    throw streamError instanceof Error ? streamError : new Error(JSON.stringify(streamError));
+    // A failed request, or nothing came back: report it. A stray chunk the
+    // SDK couldn't parse after the text arrived (seen with OpenAI-compatible
+    // gateways) should not throw away a finished translation.
+    if (APICallError.isInstance(streamError) || !fullRaw.trim()) {
+      throw streamError instanceof Error ? streamError : new Error(JSON.stringify(streamError));
+    }
+    console.warn('Ignoring stream error after the translation arrived:', streamError);
   }
 
   // Final flush (covers very short outputs that never crossed the buffer

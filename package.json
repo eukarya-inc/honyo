@@ -66,11 +66,11 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.23",
-    "@ai-sdk/google": "^2.0.17",
-    "@ai-sdk/openai": "^2.0.42",
-    "@ai-sdk/xai": "^2.0.93",
-    "ai": "^5.0.60",
+    "@ai-sdk/anthropic": "^4.0.104",
+    "@ai-sdk/google": "^4.0.120",
+    "@ai-sdk/openai": "^4.0.117",
+    "@ai-sdk/xai": "^5.0.45",
+    "ai": "^7.0.172",
     "dotenv": "^18.0.10",
     "eld": "^2.1.1",
     "electron-updater": "^6.6.2",

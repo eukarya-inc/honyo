@@ -325,7 +325,7 @@ Rules:
       ? `Current custom prompt:\n${data.currentPrompt}\n\nUser's request: ${data.instruction}`
       : `User's request: ${data.instruction}`;
 
-    const { text } = await generateText({ model, system: systemPrompt, prompt: userPrompt });
+    const { text } = await generateText({ model, instructions: systemPrompt, prompt: userPrompt });
     return { success: true, prompt: text.trim() };
   } catch (error) {
     console.error('Failed to generate custom prompt:', error);

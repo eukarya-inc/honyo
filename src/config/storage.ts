@@ -17,26 +17,47 @@ export const legacyApiKeysPath = join(app.getPath('userData'), 'apikeys.json');
 
 const ENC_PREFIX = 'enc:';
 
-function encryptSecret(value: string): string {
-  if (!value) return '';
-  try {
-    if (safeStorage.isEncryptionAvailable()) {
-      return ENC_PREFIX + safeStorage.encryptString(value).toString('base64');
-    }
-  } catch (error) {
-    console.error('Failed to encrypt API key, storing unencrypted:', error);
-  }
-  return value;
+// safeStorage's async API (the sync one is deprecated in Electron 45 and gone
+// in 46) makes encryption asynchronous, but saveConfig() is called
+// synchronously all over the app. So every key's sealed form is remembered,
+// as read from disk or once encrypted, and only a key that changed has to be
+// encrypted before the file is written.
+const sealed = new Map<string, string>();
+
+let available: Promise<boolean> | undefined;
+function encryptionAvailable(): Promise<boolean> {
+  available ??= safeStorage.isAsyncEncryptionAvailable().catch(() => false);
+  return available;
 }
 
-function decryptSecret(value: string): string {
+async function decryptSecret(value: string): Promise<string> {
+  // Stored as-is (no OS backend when it was saved): encrypted on next save.
   if (!value.startsWith(ENC_PREFIX)) return value;
   try {
-    return safeStorage.decryptString(Buffer.from(value.slice(ENC_PREFIX.length), 'base64'));
+    const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(
+      Buffer.from(value.slice(ENC_PREFIX.length), 'base64'),
+    );
+    // Remember the stored form unless the OS asks for a fresh encryption.
+    if (!shouldReEncrypt) sealed.set(result, value);
+    return result;
   } catch (error) {
     console.error('Failed to decrypt API key (was it stored on another machine?):', error);
     return '';
   }
+}
+
+async function seal(value: string): Promise<void> {
+  if (!value || sealed.has(value) || !(await encryptionAvailable())) return;
+  try {
+    const encrypted = await safeStorage.encryptStringAsync(value);
+    sealed.set(value, ENC_PREFIX + encrypted.toString('base64'));
+  } catch (error) {
+    console.error('Failed to encrypt API key, storing unencrypted:', error);
+  }
+}
+
+function secrets(store: StoredConfig): string[] {
+  return store.profiles.flatMap(p => PROVIDER_IDS.map(id => p.providers[id]?.apiKey ?? ''));
 }
 
 function mapSecrets(store: StoredConfig, fn: (v: string) => string): StoredConfig {
@@ -52,6 +73,12 @@ function mapSecrets(store: StoredConfig, fn: (v: string) => string): StoredConfi
       return { ...p, providers };
     }),
   };
+}
+
+async function decryptSecrets(store: StoredConfig): Promise<StoredConfig> {
+  const plain = new Map<string, string>();
+  for (const value of new Set(secrets(store))) plain.set(value, await decryptSecret(value));
+  return mapSecrets(store, v => plain.get(v) ?? '');
 }
 
 // --- Load / save ---------------------------------------------------------------
@@ -71,7 +98,7 @@ function readLegacyApiKeys(): Partial<ApiKeys> {
  * Load config.json, migrating a version-1 flat file (plus apikeys.json) into
  * the profile-based version-2 layout on first run. Returns decrypted data.
  */
-export function loadStoredConfig(defaults: Config): StoredConfig {
+export async function loadStoredConfig(defaults: Config): Promise<StoredConfig> {
   let raw: Record<string, unknown> | null = null;
   try {
     if (existsSync(configPath)) {
@@ -82,7 +109,7 @@ export function loadStoredConfig(defaults: Config): StoredConfig {
   }
 
   if (raw && raw.version === 2) {
-    return normalizeStore(mapSecrets(raw as unknown as StoredConfig, decryptSecret), defaults);
+    return normalizeStore(await decryptSecrets(raw as unknown as StoredConfig), defaults);
   }
 
   // Version 1 (or no file): fold the flat config and the plaintext key file
@@ -93,7 +120,7 @@ export function loadStoredConfig(defaults: Config): StoredConfig {
   const store = migrateLegacyConfig(raw ?? {}, defaults, legacyKeys);
   if (raw || existsSync(legacyApiKeysPath)) {
     console.log('Migrating config to profile layout (v2)');
-    saveStoredConfig(store);
+    await saveStoredConfig(store);
     try {
       if (existsSync(legacyApiKeysPath)) unlinkSync(legacyApiKeysPath);
     } catch (error) {
@@ -103,11 +130,27 @@ export function loadStoredConfig(defaults: Config): StoredConfig {
   return store;
 }
 
-export function saveStoredConfig(store: StoredConfig): void {
-  try {
-    writeFileSync(configPath, JSON.stringify(mapSecrets(store, encryptSecret), null, 2));
-    chmodSync(configPath, 0o600);
-  } catch (error) {
-    console.error('Failed to save config:', error);
-  }
+// Saves run one after another, so an older snapshot never overwrites a newer
+// one while a changed key is being encrypted.
+let saving: Promise<void> = Promise.resolve();
+
+/**
+ * Write config.json with API keys encrypted. Snapshots `store` now; resolves
+ * once the file is written (immediately after any key that changed is
+ * encrypted).
+ */
+export function saveStoredConfig(store: StoredConfig): Promise<void> {
+  const snapshot = structuredClone(store);
+  saving = saving.then(async () => {
+    try {
+      for (const value of new Set(secrets(snapshot))) await seal(value);
+      // A key that couldn't be encrypted (no OS backend) is stored as-is.
+      const onDisk = mapSecrets(snapshot, v => (v ? (sealed.get(v) ?? v) : ''));
+      writeFileSync(configPath, JSON.stringify(onDisk, null, 2));
+      chmodSync(configPath, 0o600);
+    } catch (error) {
+      console.error('Failed to save config:', error);
+    }
+  });
+  return saving;
 }

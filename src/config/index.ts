@@ -76,9 +76,9 @@ function activeProfile(): Profile {
   return first;
 }
 
-export function initializeConfig(): void {
+export async function initializeConfig(): Promise<void> {
   const defaults = getDefaultConfig();
-  store = loadStoredConfig(defaults);
+  store = await loadStoredConfig(defaults);
   managed = loadManagedConfig();
 
   for (const profile of store.profiles) {
@@ -155,7 +155,7 @@ export function clearSkippedUpdateVersion(): void {
 
 export function saveConfig(): void {
   store.isPaused = isPaused;
-  saveStoredConfig(store);
+  void saveStoredConfig(store);
 }
 
 // --- Providers (active profile) -------------------------------------------------

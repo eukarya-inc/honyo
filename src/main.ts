@@ -54,7 +54,7 @@ function initialize(): void {
     }
 
     // Initialize configuration
-    initializeConfig();
+    await initializeConfig();
 
     // Pin the currently-selected model so the model-list cap never drops it
     setSelectedModelProvider(() => getConfig().aiModel);

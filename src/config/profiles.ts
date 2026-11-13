@@ -64,10 +64,7 @@ export function splitUpdates(updates: Partial<Config>): {
   for (const [key, value] of Object.entries(updates)) {
     (isProfileKey(key) ? profile : global)[key] = value;
   }
-  return {
-    profile: profile as Partial<Omit<ProfileSettings, 'providers'>>,
-    global: global as Partial<GlobalSettings>,
-  };
+  return { profile, global };
 }
 
 /** Merge global settings with the active profile into the flat Config view. */

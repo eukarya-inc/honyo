@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync, chmodSync, unlinkSync } from 'fs';
-import type { ApiKeys, Config, LegacyConfig, StoredConfig } from './types.ts';
+import type { ApiKeys, Config, StoredConfig } from './types.ts';
 import { migrateLegacyConfig, normalizeStore, PROVIDER_IDS } from './profiles.ts';
 
 export const configPath = join(app.getPath('userData'), 'config.json');
@@ -90,7 +90,7 @@ export function loadStoredConfig(defaults: Config): StoredConfig {
   // Keys supplied via environment variables are NOT written to disk: they
   // keep working as a runtime fallback (see getApiKeys in index.ts).
   const legacyKeys = readLegacyApiKeys();
-  const store = migrateLegacyConfig((raw ?? {}) as LegacyConfig, defaults, legacyKeys);
+  const store = migrateLegacyConfig(raw ?? {}, defaults, legacyKeys);
   if (raw || existsSync(legacyApiKeysPath)) {
     console.log('Migrating config to profile layout (v2)');
     saveStoredConfig(store);

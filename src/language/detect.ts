@@ -52,14 +52,7 @@ export function extractProse(text: string): string {
 // --- 2. Script vote --------------------------------------------------------------
 
 export type Script =
-  | 'kana'
-  | 'han'
-  | 'hangul'
-  | 'latin'
-  | 'cyrillic'
-  | 'arabic'
-  | 'devanagari'
-  | 'other';
+  'kana' | 'han' | 'hangul' | 'latin' | 'cyrillic' | 'arabic' | 'devanagari' | 'other';
 
 const SCRIPT_RES: Array<[Script, RegExp]> = [
   ['kana', /[぀-ヿㇰ-ㇿｦ-ﾟ]/],

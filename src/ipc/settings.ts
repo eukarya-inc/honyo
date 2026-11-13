@@ -14,13 +14,7 @@ export type TranslateTrigger = 'double-copy' | 'shortcut';
 export type TranslateSource = 'copy-selection' | 'clipboard';
 
 export type ModelOptionGroup =
-  | 'default'
-  | 'anthropic'
-  | 'openai'
-  | 'google'
-  | 'xai'
-  | 'advanced'
-  | 'custom';
+  'default' | 'anthropic' | 'openai' | 'google' | 'xai' | 'advanced' | 'custom';
 
 export interface ModelOption {
   id: string;
@@ -87,8 +81,7 @@ export interface GeneratePromptRequest {
 }
 
 export type GeneratePromptResult =
-  | { success: true; prompt: string }
-  | { success: false; error: string };
+  { success: true; prompt: string } | { success: false; error: string };
 
 export interface CreateProfileRequest {
   name: string;

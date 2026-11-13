@@ -93,6 +93,7 @@ const SCRIPT_LANGUAGES: Record<Exclude<Script, 'other'>, string[]> = {
 {
   const nonLatin = new Set([
     ...Object.values(SCRIPT_LANGUAGES).flat(),
+    'Japanese (Easy)', // a style of Japanese, not a script of its own
     ...SINGLE_SCRIPT.map(([, l]) => l),
   ]);
   SCRIPT_LANGUAGES.latin = Object.values(LANGUAGES).filter(l => !nonLatin.has(l));

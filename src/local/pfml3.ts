@@ -5,6 +5,8 @@
 const PLAMO_CODES: Record<string, string> = {
   English: 'en',
   Japanese: 'ja',
+  // Undocumented in the model card; PFN's plamo-translate-cli sends it.
+  'Japanese (Easy)': 'ja(easy)',
   'Chinese (Simplified)': 'zh-hans',
   'Chinese (Traditional)': 'zh-hant',
   Korean: 'ko',

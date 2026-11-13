@@ -12,7 +12,7 @@
 ## Features
 
 - ⚡ **Instant Translation** - Double Ctrl/Cmd+C to translate any selected text
-- 🌍 **Multi-Language Support** - 60 built-in languages plus custom language support
+- 🌍 **Multi-Language Support** - 61 built-in languages (including Easy Japanese) plus custom language support
 - 🤖 **Auto-Updating AI Models** - Claude, GPT, Gemini, Grok (xAI), and custom models, with the model list kept up to date automatically
 - 💻 **Local Translation** - Download PLaMo 3 Translate and translate on your own computer, with no API key and no text leaving the machine
 - 🔁 **Back-Translation** - Instantly check quality by translating the result back to the source language
@@ -141,8 +141,10 @@ You can change these settings from the system tray menu:
 1. Click on "Primary: [Language]" to select your primary translation target
 2. Click on "Secondary: [Language]" to select your fallback language
 
-**Supported Languages (60):**
-English, Japanese, Chinese (Simplified), Chinese (Traditional), Korean, Spanish, French, German, Italian, Portuguese, Russian, Arabic, Hindi, Thai, Vietnamese, Indonesian, Malay, Filipino, Dutch, Polish, Turkish, Ukrainian, Swedish, Danish, Norwegian, Finnish, Azerbaijani, Belarusian, Bulgarian, Bengali, Catalan, Cebuano, Estonian, Basque, Persian, Gujarati, Hebrew, Croatian, Hungarian, Armenian, Javanese, Georgian, Kazakh, Khmer, Lithuanian, Latvian, Malayalam, Marathi, Burmese, Nepali, Punjabi, Sinhala, Slovak, Slovenian, Serbian, Swahili, Tamil, Telugu, Urdu, Uzbek
+**Supported Languages (61):**
+English, Japanese, Japanese (Easy), Chinese (Simplified), Chinese (Traditional), Korean, Spanish, French, German, Italian, Portuguese, Russian, Arabic, Hindi, Thai, Vietnamese, Indonesian, Malay, Filipino, Dutch, Polish, Turkish, Ukrainian, Swedish, Danish, Norwegian, Finnish, Azerbaijani, Belarusian, Bulgarian, Bengali, Catalan, Cebuano, Estonian, Basque, Persian, Gujarati, Hebrew, Croatian, Hungarian, Armenian, Javanese, Georgian, Kazakh, Khmer, Lithuanian, Latvian, Malayalam, Marathi, Burmese, Nepali, Punjabi, Sinhala, Slovak, Slovenian, Serbian, Swahili, Tamil, Telugu, Urdu, Uzbek
+
+**Japanese (Easy)** is やさしい日本語: short sentences and everyday words for readers still learning Japanese. Pair it with Japanese to rewrite ordinary Japanese into Easy Japanese, or with another language to translate into it. Both the cloud models and the local PLaMo model support it.
 
 ### Profiles
 
@@ -316,7 +318,7 @@ The app intelligently determines the translation direction:
 ### Menu Options
 
 Access these options by clicking the system tray icon:
-- **Primary/Secondary Language**: Set your translation language preferences (60 built-in languages + custom)
+- **Primary/Secondary Language**: Set your translation language preferences (61 built-in languages + custom)
 - **Display Mode**: Choose between notification and popup window
 - **AI Model**: Choose which AI model to use for translations (latest Claude, GPT, and Gemini models — auto-updated — or a custom model)
 - **Settings**: Everything above and more — the tray menu is a shortcut to the most-used settings

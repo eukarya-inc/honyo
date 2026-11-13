@@ -2,6 +2,8 @@
 export const LANGUAGES: Record<string, string> = {
   en: 'English',
   ja: 'Japanese',
+  // やさしい日本語: a target style, never what detection reports for input.
+  'ja-easy': 'Japanese (Easy)',
   'zh-CN': 'Chinese (Simplified)',
   'zh-TW': 'Chinese (Traditional)',
   ko: 'Korean',

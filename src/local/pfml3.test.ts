@@ -21,6 +21,7 @@ describe('plamoLanguageCode', () => {
     expect(plamoLanguageCode('Chinese (Traditional)')).toBe('zh-hant');
     expect(plamoLanguageCode('Filipino')).toBe('tl');
     expect(plamoLanguageCode('Cebuano')).toBe('ceb');
+    expect(plamoLanguageCode('Japanese (Easy)')).toBe('ja(easy)');
     expect(plamoLanguageCode('Portuguese')).toBeUndefined();
   });
 });

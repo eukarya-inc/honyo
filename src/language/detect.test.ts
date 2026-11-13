@@ -132,6 +132,22 @@ describe('pickDirection', () => {
     });
   });
 
+  it('rewrites Japanese into Japanese (Easy), never detecting it as the source', () => {
+    expect(
+      pickDirection('台風の接近に伴い避難してください。', 'Japanese (Easy)', 'English'),
+    ).toEqual({
+      source: 'Japanese',
+      target: 'Japanese (Easy)',
+    });
+    expect(pickDirection('Please evacuate now.', 'English', 'Japanese (Easy)')).toEqual({
+      source: 'English',
+      target: 'Japanese (Easy)',
+    });
+    expect(pickDirection('すぐに逃げてください。', 'English', 'Japanese (Easy)').target).toBe(
+      'English',
+    );
+  });
+
   it('separates two Latin-script languages', () => {
     expect(pickDirection('Merci beaucoup pour votre aide', 'French', 'English').target).toBe(
       'English',

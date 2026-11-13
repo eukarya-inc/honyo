@@ -187,6 +187,7 @@ function snapshot(): SettingsSnapshot {
     aiModel: config.aiModel,
     profileShortcut: config.shortcut ?? '',
     displayMode: config.displayMode,
+    notificationStyle: config.notificationStyle ?? 'auto',
     translateTrigger: config.shortcuts?.translateTrigger ?? 'double-copy',
     translateShortcut: config.shortcuts?.translateShortcut ?? '',
     translateSource: config.shortcuts?.translateSource ?? 'copy-selection',
@@ -243,6 +244,7 @@ function applyPatch(patch: SettingsPatch): void {
   }
   if (patch.aiModel !== undefined) updates.aiModel = patch.aiModel;
   if (patch.displayMode !== undefined) updates.displayMode = patch.displayMode;
+  if (patch.notificationStyle !== undefined) updates.notificationStyle = patch.notificationStyle;
   if (
     patch.translateTrigger !== undefined ||
     patch.translateShortcut !== undefined ||

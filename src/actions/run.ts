@@ -2,7 +2,7 @@
 // tray icon, popup or notification output, and history. The keyboard trigger
 // and future menu/shortcut entry points all go through here.
 import { describeError } from '../translation/errors.ts';
-import { clipboard, Notification } from 'electron';
+import { clipboard } from 'electron';
 import { getConfig, getPausedState, getActiveProfileId } from '../config/index.ts';
 import { setTrayIcon } from '../ui/tray.ts';
 import {
@@ -17,6 +17,7 @@ import {
 import { addHistoryEntry } from '../history/index.ts';
 import { getAction } from './registry.ts';
 import type { ActionInput, ActionMeta } from './types.ts';
+import { notify } from '../ui/notify.ts';
 
 let isRunning = false;
 let currentAbortController: AbortController | null = null;
@@ -104,10 +105,10 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
     } else {
       // Notification mode: copy to clipboard and show notification
       clipboard.writeText(result.text);
-      new Notification({
+      notify({
         title: `${action.name} Result`,
         body: result.text.length > 100 ? result.text.slice(0, 100) + '...' : result.text,
-      }).show();
+      });
     }
 
     if (config.historyEnabled !== false) {
@@ -133,10 +134,10 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       showPopupError(message);
     } else {
       // Notification mode: nothing is copied; say what went wrong.
-      new Notification({
+      notify({
         title: `${action.name} Failed`,
         body: message.length > 200 ? message.slice(0, 200) + '…' : message,
-      }).show();
+      });
     }
   } finally {
     // Only reset state if this is still the current run

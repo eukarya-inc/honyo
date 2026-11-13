@@ -9,6 +9,8 @@ export interface ApiKeys {
 
 export type DisplayMode = 'notification' | 'popup';
 
+export type NotificationStyle = 'auto' | 'system' | 'app';
+
 export interface CustomModel {
   model: string;
   provider: ProviderId;
@@ -62,6 +64,8 @@ export interface GlobalSettings {
   autoCloseOnBlur?: boolean;
   enableStreaming?: boolean;
   displayMode: DisplayMode;
+  /** How notices are shown: OS notification, Honyo's toast, or auto (default). */
+  notificationStyle?: NotificationStyle;
   openAtLogin?: boolean;
   popupFontSize?: number;
   popupSize?: { width: number; height: number };

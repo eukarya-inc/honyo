@@ -1,9 +1,10 @@
 // Global shortcut registration: the custom translate trigger and per-profile
 // activation shortcuts. Re-run whenever config changes; safe to call often.
-import { globalShortcut, Notification } from 'electron';
+import { globalShortcut } from 'electron';
 import { getConfig, listProfiles, setActiveProfile } from '../config/index.ts';
 import { isValidAccelerator, formatAccelerator } from './accelerator.ts';
 import { triggerTranslation } from './handler.ts';
+import { notify } from '../ui/notify.ts';
 
 export interface ShortcutProblem {
   accelerator: string;
@@ -49,7 +50,7 @@ export function registerShortcuts(): ShortcutProblem[] {
     if (!profile.shortcut) continue;
     tryRegister(profile.shortcut, `Profile "${profile.name}"`, () => {
       if (setActiveProfile(profile.id)) {
-        new Notification({ title: 'Honyo', body: `Profile: ${profile.name}` }).show();
+        notify({ title: 'Honyo', body: `Profile: ${profile.name}` });
       }
     });
   }
@@ -59,10 +60,10 @@ export function registerShortcuts(): ShortcutProblem[] {
       p => `${p.purpose}: ${formatAccelerator(p.accelerator, process.platform)}`,
     );
     console.warn('Shortcuts not registered:', lines);
-    new Notification({
+    notify({
       title: 'Shortcut not available',
       body: `Already in use or invalid:\n${lines.join('\n')}`,
-    }).show();
+    });
   }
   return lastProblems;
 }

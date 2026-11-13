@@ -23,6 +23,7 @@ export interface ModelOption {
 }
 
 export type DisplayMode = 'notification' | 'popup';
+export type NotificationStyle = 'auto' | 'system' | 'app';
 
 /**
  * Flat, renderer-friendly view of everything the settings window edits. The
@@ -44,6 +45,7 @@ export interface SettingsSnapshot {
   /** Global shortcut that activates the active profile ("" for none). */
   profileShortcut: string;
   displayMode: DisplayMode;
+  notificationStyle: NotificationStyle;
   translateTrigger: TranslateTrigger;
   translateShortcut: string;
   translateSource: TranslateSource;

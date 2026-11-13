@@ -1,11 +1,12 @@
 // Electron glue for the local engine: where files live, and the download flow
 // started from the tray (license consent -> download -> progress).
 
-import { app, dialog, Notification, shell } from 'electron';
+import { app, dialog, shell } from 'electron';
 import { join } from 'path';
 import { LOCAL_MODELS } from './catalog.ts';
 import { installModel, installRuntime, isModelInstalled } from './runtime.ts';
 import { parseLocalModelKey, stopLocalServer, warmupLocal } from './index.ts';
+import { notify } from '../ui/notify.ts';
 
 const LICENSE_URL = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';
 
@@ -86,15 +87,15 @@ export async function downloadLocalModel(
     await installRuntime(base, { signal: inFlight.signal, onProgress: progress });
     last = -1;
     await installModel(base, modelId, { signal: inFlight.signal, onProgress: progress });
-    new Notification({ title: 'Local model ready', body: `${m.name} is ready to use.` }).show();
+    notify({ title: 'Local model ready', body: `${m.name} is ready to use.` });
     return true;
   } catch (error) {
     if (!inFlight.signal.aborted) {
       console.error('Local model download failed:', error);
-      new Notification({
+      notify({
         title: 'Download failed',
         body: error instanceof Error ? error.message : String(error),
-      }).show();
+      });
     }
     return false;
   } finally {

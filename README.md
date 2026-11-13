@@ -101,7 +101,7 @@ To use the translation features, you need to configure API keys for your preferr
 Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
 languages, model, display mode); the Settings window has all of them:
 
-- **General**: result display mode, translate shortcut, popup behaviour, history, launch at login
+- **General**: result display mode, notification style, translate shortcut, popup behaviour, history, launch at login
 - **Translation**: primary / secondary language, profile shortcut, AI model, custom model
 - **Customization**: custom prompt (with AI assist), custom languages
 - **API Keys**: per-provider keys and optional gateway endpoints
@@ -251,7 +251,7 @@ Configure popup window and translation display behavior:
 6. Click "Save"
 
 **Display Modes:**
-- **Notification & Copy**: Translation result appears as a system notification and is automatically copied to clipboard
+- **Notification & Copy**: Translation result appears as a notification and is automatically copied to clipboard. Settings → General → Notifications chooses system notifications, Honyo's own, or Automatic (system ones, switching to Honyo's when the system can't show them, as for an unsigned app on macOS)
 - **Popup Window**: Translation result appears in a floating window with additional features:
   - Language direction shown in the header (e.g. "English → Japanese")
   - Real-time streaming (when enabled)

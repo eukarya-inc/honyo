@@ -1,6 +1,7 @@
 import './app/dev-userdata.ts';
 import { app } from 'electron';
 import { syncLocalServer } from './local/app.ts';
+import { captureToastTo } from './ui/notify.ts';
 import { initializeConfig, getConfig } from './config/index.ts';
 import { loadModelsCache, refreshModels, setSelectedModelProvider } from './models-remote.ts';
 import { createTray, setupSettingsIPC } from './ui/index.ts';
@@ -143,6 +144,7 @@ function initialize(): void {
           if (!shot) return;
           await new Promise(r => setTimeout(r, 500));
           await capturePopupTo(`${shot}-done.png`);
+          await captureToastTo(`${shot}-toast.png`);
           app.quit();
         });
       }, delay);

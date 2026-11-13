@@ -1,4 +1,3 @@
-import { Notification } from 'electron';
 import { APICallError, generateText, streamText } from 'ai';
 import type { LanguageModel } from 'ai';
 import { CUSTOM_MODEL_ID } from '../models.ts';
@@ -11,6 +10,7 @@ import { parseTranslationOutput, isHeaderResolvable, type ParsedTranslation } fr
 import { detectScriptHint } from './script-hint.ts';
 import { parseLocalModelKey, translateLocal } from '../local/index.ts';
 import { localBaseDir } from '../local/app.ts';
+import { notify } from '../ui/notify.ts';
 
 export type TranslationResult = ParsedTranslation;
 
@@ -56,19 +56,19 @@ ${customPromptSection}`.trim();
 function validateApiKey(config: Config, apiKeys: ApiKeys): { valid: boolean; error?: string } {
   if (config.aiModel === CUSTOM_MODEL_ID) {
     if (!config.customModel || !config.customModel.model || !config.customModel.provider) {
-      new Notification({
+      notify({
         title: 'Custom Model Not Configured',
         body: 'Please configure custom model in Settings',
-      }).show();
+      });
       return { valid: false, error: 'Custom model not configured' };
     }
 
     const apiKey = apiKeys[config.customModel.provider];
     if (!apiKey) {
-      new Notification({
+      notify({
         title: 'API Key Missing',
         body: `Please configure API key for ${config.customModel.provider}`,
-      }).show();
+      });
       return { valid: false, error: `API key not configured for ${config.customModel.provider}` };
     }
   } else {
@@ -79,10 +79,10 @@ function validateApiKey(config: Config, apiKeys: ApiKeys): { valid: boolean; err
 
     const apiKey = apiKeys[modelInfo.provider];
     if (!apiKey) {
-      new Notification({
+      notify({
         title: 'API Key Missing',
         body: `Please configure API key for ${modelInfo.name}`,
-      }).show();
+      });
       return { valid: false, error: `API key not configured for ${modelInfo.provider}` };
     }
   }
@@ -109,10 +109,10 @@ function handleTranslationError(error: unknown, config: Config): string {
       config.aiModel === CUSTOM_MODEL_ID
         ? 'Custom Model'
         : (getModelInfo(config.aiModel)?.name ?? 'selected model');
-    new Notification({
+    notify({
       title: 'API Key Missing',
       body: `Please configure API key for ${modelName}`,
-    }).show();
+    });
     return 'API key not configured';
   }
   return 'Translation failed: ' + (error instanceof Error ? error.message : String(error));

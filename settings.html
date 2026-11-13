@@ -423,6 +423,22 @@
               </x-menu>
             </x-select>
           </div>
+          <div class="row">
+            <div class="text">
+              <x-label>Notifications</x-label>
+              <span class="hint"
+                >Automatic uses the system's notifications and switches to Honyo's own when they
+                can't be shown (e.g. an unsigned app on macOS).</span
+              >
+            </div>
+            <x-select data-field="notificationStyle">
+              <x-menu>
+                <x-menuitem value="auto" toggled><x-label>Automatic</x-label></x-menuitem>
+                <x-menuitem value="system"><x-label>System notifications</x-label></x-menuitem>
+                <x-menuitem value="app"><x-label>Honyo notifications</x-label></x-menuitem>
+              </x-menu>
+            </x-select>
+          </div>
         </div>
 
         <span class="group-title">Shortcuts</span>

@@ -33,6 +33,7 @@ export async function buildRenderer(): Promise<void> {
       settings: join(rootDir, 'src/renderer/settings/index.ts'),
       popup: join(rootDir, 'src/renderer/popup/index.ts'),
       toast: join(rootDir, 'src/renderer/toast/index.ts'),
+      sound: join(rootDir, 'src/renderer/sound/index.ts'),
     },
     bundle: true,
     outdir: join(rootDir, 'build/renderer'),

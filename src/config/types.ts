@@ -66,6 +66,8 @@ export interface GlobalSettings {
   displayMode: DisplayMode;
   /** How notices are shown: OS notification, Honyo's toast, or auto (default). */
   notificationStyle?: NotificationStyle;
+  /** Play a chime when an action finishes or fails (default false). */
+  soundEnabled?: boolean;
   openAtLogin?: boolean;
   popupFontSize?: number;
   popupSize?: { width: number; height: number };

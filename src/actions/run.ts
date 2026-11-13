@@ -1,6 +1,7 @@
 // Runs an action end to end: pause check, cancellation of a previous run,
 // tray icon, popup or notification output, and history. The keyboard trigger
 // and future menu/shortcut entry points all go through here.
+import { playChime } from '../ui/sound.ts';
 import { describeError } from '../translation/errors.ts';
 import { clipboard } from 'electron';
 import { getConfig, getPausedState, getActiveProfileId } from '../config/index.ts';
@@ -92,6 +93,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       },
     });
     if (signal.aborted) return;
+    playChime('done');
 
     if (usePopup) {
       if (streaming) {
@@ -128,6 +130,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       return;
     }
     console.error(`Error running ${action.name}:`, error);
+    playChime('error');
     const message = describeError(error);
     if (usePopup) {
       // Keep the popup open and show why, instead of an empty window.

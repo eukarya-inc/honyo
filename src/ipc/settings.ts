@@ -46,6 +46,7 @@ export interface SettingsSnapshot {
   profileShortcut: string;
   displayMode: DisplayMode;
   notificationStyle: NotificationStyle;
+  soundEnabled: boolean;
   translateTrigger: TranslateTrigger;
   translateShortcut: string;
   translateSource: TranslateSource;

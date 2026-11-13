@@ -109,7 +109,8 @@ export async function captureToastTo(path: string): Promise<boolean> {
 }
 
 function showSystem(notice: Notice, onFailed?: () => void): void {
-  const n = new Notification(notice);
+  // Silent: Honyo plays its own sound (Settings -> General), in every mode.
+  const n = new Notification({ title: notice.title, body: notice.body, silent: true });
   n.on('failed', (_e, error) => {
     console.warn('System notification failed:', error);
     onFailed?.();

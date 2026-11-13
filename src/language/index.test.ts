@@ -14,6 +14,12 @@ describe('getLanguageFromLocale', () => {
     expect(getLanguageFromLocale('fr-FR')).toBe('French');
   });
 
+  it('maps locales of the languages added for PLaMo', () => {
+    expect(getLanguageFromLocale('he')).toBe('Hebrew');
+    expect(getLanguageFromLocale('uk-UA')).toBe('Ukrainian');
+    expect(getLanguageFromLocale('fa-IR')).toBe('Persian');
+  });
+
   it('should handle Chinese locales correctly', () => {
     expect(getLanguageFromLocale('zh-CN')).toBe('Chinese (Simplified)');
     expect(getLanguageFromLocale('zh-TW')).toBe('Chinese (Traditional)');

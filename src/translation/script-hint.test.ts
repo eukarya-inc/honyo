@@ -22,6 +22,16 @@ describe('detectScriptHint', () => {
     expect(detectScriptHint('Команда SRE может это поддерживать')).toContain('Cyrillic');
   });
 
+  it('does not pin a shared script to one language', () => {
+    expect(detectScriptHint('سلام، حال شما چطور است؟')).toContain('Persian');
+    expect(detectScriptHint('नमस्ते')).toContain('Marathi');
+  });
+
+  it('flags scripts of the newly added languages', () => {
+    expect(detectScriptHint('שלום עולם')).toContain('Hebrew');
+    expect(detectScriptHint('გამარჯობა')).toContain('Georgian');
+  });
+
   it('returns undefined for pure Latin text', () => {
     expect(detectScriptHint('The SRE team can maintain Honyo')).toBeUndefined();
   });

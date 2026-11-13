@@ -6,13 +6,36 @@
 // are unambiguous evidence of the sentence's language, so we hand that to the
 // model as a hint in the system prompt.
 
-const KANA_RE = /[぀-ゟ゠-ヿㇰ-ㇿｦ-ﾟ]/;
-const HANGUL_RE = /[가-힯ᄀ-ᇿ㄰-㆏]/;
+// [script, what it says about the sentence]. Order matters: kana before Han.
+const SCRIPTS: Array<[RegExp, string, string]> = [
+  [/[぀-ヿㇰ-ㇿｦ-ﾟ]/, 'Japanese kana (hiragana/katakana)', 'Japanese'],
+  [/[가-힯ᄀ-ᇿ㄰-㆏]/, 'Hangul', 'Korean'],
+  [/[฀-๿]/, 'Thai script', 'Thai'],
+  [/[֐-׿]/, 'Hebrew script', 'Hebrew'],
+  [/[԰-֏]/, 'Armenian script', 'Armenian'],
+  [/[Ⴀ-ჿ]/, 'Georgian script', 'Georgian'],
+  [/[ঀ-৿]/, 'Bengali script', 'Bengali'],
+  [/[਀-੿]/, 'Gurmukhi script', 'Punjabi'],
+  [/[઀-૿]/, 'Gujarati script', 'Gujarati'],
+  [/[஀-௿]/, 'Tamil script', 'Tamil'],
+  [/[ఀ-౿]/, 'Telugu script', 'Telugu'],
+  [/[ഀ-ൿ]/, 'Malayalam script', 'Malayalam'],
+  [/[඀-෿]/, 'Sinhala script', 'Sinhala'],
+  [/[ក-៿]/, 'Khmer script', 'Khmer'],
+  [/[က-႟]/, 'Myanmar script', 'Burmese'],
+  [
+    /[ऀ-ॿ]/,
+    'Devanagari script',
+    'a Devanagari-script language (most likely Hindi, Marathi or Nepali)',
+  ],
+  [/[؀-ۿ]/, 'Arabic script', 'an Arabic-script language (most likely Arabic, Persian or Urdu)'],
+  [
+    /[Ѐ-ӿ]/,
+    'Cyrillic script',
+    'a Cyrillic-script language (most likely Russian, Ukrainian, Bulgarian, Serbian, Belarusian or Kazakh)',
+  ],
+];
 const HAN_RE = /[一-鿿㐀-䶿]/;
-const THAI_RE = /[฀-๿]/;
-const CYRILLIC_RE = /[Ѐ-ӿ]/;
-const ARABIC_RE = /[؀-ۿ]/;
-const DEVANAGARI_RE = /[ऀ-ॿ]/;
 
 /**
  * Return a short, human-readable hint about the language implied by the
@@ -20,23 +43,10 @@ const DEVANAGARI_RE = /[ऀ-ॿ]/;
  * useful (e.g. pure Latin text, which could be any of many languages).
  */
 export function detectScriptHint(text: string): string | undefined {
-  if (KANA_RE.test(text)) {
-    return 'The input contains Japanese kana (hiragana/katakana), so the sentence itself is written in Japanese even if it also contains Latin-script names, acronyms, or code.';
-  }
-  if (HANGUL_RE.test(text)) {
-    return 'The input contains Hangul, so the sentence itself is written in Korean even if it also contains Latin-script names, acronyms, or code.';
-  }
-  if (THAI_RE.test(text)) {
-    return 'The input contains Thai script, so the sentence itself is written in Thai even if it also contains Latin-script names, acronyms, or code.';
-  }
-  if (DEVANAGARI_RE.test(text)) {
-    return 'The input contains Devanagari script, so the sentence itself is written in Hindi even if it also contains Latin-script names, acronyms, or code.';
-  }
-  if (ARABIC_RE.test(text)) {
-    return 'The input contains Arabic script, so the sentence itself is written in Arabic even if it also contains Latin-script names, acronyms, or code.';
-  }
-  if (CYRILLIC_RE.test(text)) {
-    return 'The input contains Cyrillic script, so the sentence itself is written in a Cyrillic-script language (most likely Russian or Ukrainian) even if it also contains Latin-script names, acronyms, or code.';
+  for (const [re, script, language] of SCRIPTS) {
+    if (re.test(text)) {
+      return `The input contains ${script}, so the sentence itself is written in ${language} even if it also contains Latin-script names, acronyms, or code.`;
+    }
   }
   if (HAN_RE.test(text)) {
     return 'The input contains Han characters but no kana, so the sentence itself is most likely written in Chinese even if it also contains Latin-script names, acronyms, or code.';

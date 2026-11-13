@@ -29,6 +29,9 @@ const api: HonyoSettingsApi = {
   onProfilesChanged: (handler: () => void) => {
     ipcRenderer.on(SETTINGS_EVENTS.profilesChanged, () => handler());
   },
+  onSaveAndClose: (handler: () => void) => {
+    ipcRenderer.on(SETTINGS_EVENTS.saveAndClose, () => handler());
+  },
 };
 
 contextBridge.exposeInMainWorld('honyo', api);

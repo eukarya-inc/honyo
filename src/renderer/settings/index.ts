@@ -314,6 +314,17 @@ function setupProfiles(): void {
 
   // The tray menu can switch profiles while this window is open.
   window.honyo.onProfilesChanged(() => void loadIntoForm());
+
+  // Closing with unsaved changes asks first (the main process shows the
+  // prompt); after Save, close once the changes are stored.
+  window.addEventListener('beforeunload', event => {
+    if (hasUnsavedChanges()) event.preventDefault();
+  });
+  window.honyo.onSaveAndClose(() => {
+    void saveAll().then(() => {
+      if (!hasUnsavedChanges()) window.close();
+    });
+  });
 }
 
 // --- Form ----------------------------------------------------------------------

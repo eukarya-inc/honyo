@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, app, shell, nativeTheme } from 'electron';
+import { BrowserWindow, ipcMain, app, shell, nativeTheme, dialog } from 'electron';
 import { LOCAL_MODELS, LOCAL_MODEL_PREFIX } from '../local/index.ts';
 import { isLocalModelReady, syncLocalServer } from '../local/app.ts';
 import { join, dirname } from 'path';
@@ -86,6 +86,27 @@ export function openSettingsWindow(): void {
     maximizable: true,
     title: 'Settings',
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
+    // Shown once painted, over the theme's own background colour, so it
+    // doesn't flash white before the (dark) theme loads.
+    show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#383838' : '#f5f5f5',
+  });
+  settingsWindow.once('ready-to-show', () => settingsWindow?.show());
+
+  // Closing with unsaved changes: the page's beforeunload vetoes the unload
+  // and Electron asks here. Save asks the page to save, then it closes itself.
+  settingsWindow.webContents.on('will-prevent-unload', event => {
+    if (!settingsWindow) return;
+    const choice = dialog.showMessageBoxSync(settingsWindow, {
+      type: 'question',
+      message: 'Save changes to your settings?',
+      detail: "Your changes will be lost if you don't save them.",
+      buttons: ['Save', "Don't Save", 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+    });
+    if (choice === 1) event.preventDefault(); // close without saving
+    if (choice === 0) settingsWindow.webContents.send(SETTINGS_EVENTS.saveAndClose);
   });
 
   // External links open in the system browser, never in a new Electron window.

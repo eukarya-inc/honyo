@@ -122,10 +122,13 @@ export interface HonyoSettingsApi {
   clearHistory(): Promise<void>;
   /** Fired when the active profile changes outside the window (tray menu). */
   onProfilesChanged(handler: () => void): void;
+  /** Fired when the user chose Save in the unsaved-changes prompt on close. */
+  onSaveAndClose(handler: () => void): void;
 }
 
 export const SETTINGS_EVENTS = {
   profilesChanged: 'settings:profiles-changed',
+  saveAndClose: 'settings:save-and-close',
 } as const;
 
 declare global {

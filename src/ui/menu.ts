@@ -14,6 +14,7 @@ import {
   downloadLocalModel,
   isLocalDownloadRunning,
   isLocalModelReady,
+  openPlamoLicense,
   syncLocalServer,
 } from '../local/app.ts';
 import {
@@ -282,6 +283,9 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         }
         if (isLocalDownloadRunning()) {
           menuItems.push({ label: 'Cancel Download', click: cancelLocalDownload });
+        }
+        if (Object.values(LOCAL_MODELS).some(m => isLocalModelReady(m.id))) {
+          menuItems.push({ label: 'Built with PLaMo: License…', click: openPlamoLicense });
         }
 
         menuItems.push({ type: 'separator' });

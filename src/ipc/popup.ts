@@ -30,6 +30,8 @@ export interface ContextMenuRequest {
 export interface PopupEvents {
   'popup-config': PopupConfig;
   'translation-loading': void;
+  /** Credit line shown under the result, clickable (e.g. "Built with PLaMo"). */
+  'translation-credit': string;
   /** Message shown under the spinner while waiting (e.g. a model loading). */
   'translation-status': string;
   'translation-langs': TranslationLangs;
@@ -51,6 +53,7 @@ export const POPUP_CHANNELS = {
   closePopup: 'close-popup',
   backTranslate: 'back-translate',
   showContextMenu: 'show-context-menu',
+  openCredit: 'open-credit',
 } as const;
 
 /** API exposed to the popup renderer on `window.honyoPopup` by the preload script. */
@@ -60,6 +63,8 @@ export interface HonyoPopupApi {
   closePopup(): void;
   backTranslate(text: string): void;
   showContextMenu(request: ContextMenuRequest): void;
+  /** Open the page behind the current credit line (the main process picks the URL). */
+  openCredit(): void;
 }
 
 declare global {

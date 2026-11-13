@@ -132,6 +132,24 @@
         word-wrap: break-word;
         white-space: pre-wrap;
       }
+      .credit {
+        flex: none;
+        align-self: flex-end;
+        margin: 0 12px 8px;
+        padding: 0;
+        border: none;
+        background: none;
+        font: inherit;
+        font-size: 11px;
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+      .credit:hover {
+        text-decoration: underline;
+      }
+      .credit[hidden] {
+        display: none;
+      }
       .translation-text.error {
         color: var(--error-color);
       }
@@ -358,6 +376,7 @@
         <div class="back-caption" id="back-caption" style="display: none"></div>
         <div class="translation-text" id="translation-text" style="display: none"></div>
       </div>
+      <button class="credit" id="credit" type="button" hidden></button>
     </div>
 
     <script src="build/renderer/popup.js"></script>

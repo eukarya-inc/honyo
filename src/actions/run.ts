@@ -12,6 +12,7 @@ import {
   updatePopupTranslation,
   updatePopupStatus,
   showPopupError,
+  updatePopupCredit,
   updatePopupLanguages,
   finalizePopupTranslation,
 } from '../ui/popup.ts';
@@ -85,6 +86,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       streaming,
       ...(streaming ? { onChunk: (text: string): void => updatePopupTranslation(text) } : {}),
       ...(usePopup ? { onStatus: (message: string): void => updatePopupStatus(message) } : {}),
+      ...(usePopup ? { onCredit: (label: string): void => updatePopupCredit(label) } : {}),
       onMeta: (m): void => {
         meta = m;
         if (usePopup && m.sourceLanguage && m.targetLanguage) {

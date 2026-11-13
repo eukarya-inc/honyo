@@ -9,7 +9,7 @@ import type { Config, ApiKeys } from '../config/types.ts';
 import { parseTranslationOutput, isHeaderResolvable, type ParsedTranslation } from './parse.ts';
 import { detectScriptHint } from './script-hint.ts';
 import { parseLocalModelKey, translateLocal } from '../local/index.ts';
-import { localBaseDir } from '../local/app.ts';
+import { localBaseDir, noteLocalModelUsed } from '../local/app.ts';
 import { notify } from '../ui/notify.ts';
 
 export type TranslationResult = ParsedTranslation;
@@ -136,11 +136,13 @@ export async function translateTextDetailed(
   // Local model: no API key, no system prompt; the app picks the direction.
   const localId = parseLocalModelKey(config.aiModel);
   if (localId) {
-    return translateLocal(localBaseDir(), text, primaryLanguage, secondaryLanguage, {
+    const r = await translateLocal(localBaseDir(), text, primaryLanguage, secondaryLanguage, {
       modelId: localId,
       ...(signal ? { signal } : {}),
       ...(onStatus ? { onStatus } : {}),
     });
+    noteLocalModelUsed();
+    return r;
   }
 
   const apiKeys = getApiKeys();
@@ -253,6 +255,7 @@ export async function translateTextStreamingStrict(
       ...(signal ? { signal } : {}),
     });
     onChunk(r.translation);
+    noteLocalModelUsed();
     return r.translation;
   }
 

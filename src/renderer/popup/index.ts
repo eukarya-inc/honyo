@@ -31,6 +31,7 @@ const copyButton = (): HTMLButtonElement => $<HTMLButtonElement>('.copy-btn');
 const spinner = (): HTMLElement => $('#spinner-container');
 const caption = (): HTMLElement => $('#back-caption');
 const spinnerStatus = (): HTMLElement => $('#spinner-status');
+const credit = (): HTMLElement => $('#credit');
 
 function formatLangs(l: Langs): string {
   return `${l.source} → ${l.target}`;
@@ -174,6 +175,7 @@ popup.on('translation-loading', () => {
   currentLangs = null;
   spinner().classList.add('active');
   spinnerStatus().textContent = '';
+  credit().hidden = true;
   translationText().style.display = 'none';
   copyButton().disabled = true;
   resetBackState();
@@ -190,6 +192,11 @@ popup.on('translation-error', message => {
   translationText().classList.add('error');
   copyButton().disabled = true;
   updateBackButtonState();
+});
+
+popup.on('translation-credit', label => {
+  credit().textContent = `${label} · License`;
+  credit().hidden = false;
 });
 
 popup.on('translation-status', message => {
@@ -266,6 +273,7 @@ popup.on('back-translation-error', message => {
 });
 
 popup.on('copy-all-requested', () => copyTranslation());
+credit().addEventListener('click', () => window.honyoPopup.openCredit());
 
 // --- DOM wiring --------------------------------------------------------------
 

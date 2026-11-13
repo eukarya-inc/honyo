@@ -68,6 +68,8 @@ export interface GlobalSettings {
   notificationStyle?: NotificationStyle;
   /** Play a chime when an action finishes or fails (default false). */
   soundEnabled?: boolean;
+  /** The one-time "Built with PLaMo" notice has been shown. */
+  plamoNoticeShown?: boolean;
   openAtLogin?: boolean;
   popupFontSize?: number;
   popupSize?: { width: number; height: number };

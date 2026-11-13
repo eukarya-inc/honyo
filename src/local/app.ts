@@ -1,14 +1,14 @@
 // Electron glue for the local engine: where files live, and the download flow
 // started from the tray (license consent -> download -> progress).
 
+import { PLAMO_LICENSE_URL } from './credit.ts';
+import { getConfig, updateConfig } from '../config/index.ts';
 import { app, dialog, shell } from 'electron';
 import { join } from 'path';
 import { LOCAL_MODELS } from './catalog.ts';
 import { installModel, installRuntime, isModelInstalled } from './runtime.ts';
 import { parseLocalModelKey, stopLocalServer, warmupLocal } from './index.ts';
 import { notify } from '../ui/notify.ts';
-
-const LICENSE_URL = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';
 
 export function localBaseDir(): string {
   return join(app.getPath('userData'), 'local-models');
@@ -69,7 +69,7 @@ export async function downloadLocalModel(
     cancelId: 1,
   });
   if (response === 2) {
-    void shell.openExternal(LICENSE_URL);
+    void shell.openExternal(PLAMO_LICENSE_URL);
     return false;
   }
   if (response !== 0) return false;
@@ -102,4 +102,22 @@ export async function downloadLocalModel(
     inFlight = undefined;
     onProgress?.('');
   }
+}
+
+export function openPlamoLicense(): void {
+  void shell.openExternal(PLAMO_LICENSE_URL);
+}
+
+/**
+ * The first translation with a local model: say once where the model comes
+ * from and under which license, with a click to read it.
+ */
+export function noteLocalModelUsed(): void {
+  if (getConfig().plamoNoticeShown) return;
+  updateConfig({ plamoNoticeShown: true });
+  notify({
+    title: 'Built with PLaMo',
+    body: 'Local translation uses PLaMo 3 Translate by Preferred Networks under the PLaMo Community License. Click to read it.',
+    onClick: openPlamoLicense,
+  });
 }

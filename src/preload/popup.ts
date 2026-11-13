@@ -18,6 +18,7 @@ const api: HonyoPopupApi = {
   backTranslate: (text: string) => ipcRenderer.send(POPUP_CHANNELS.backTranslate, text),
   showContextMenu: (request: ContextMenuRequest) =>
     ipcRenderer.send(POPUP_CHANNELS.showContextMenu, request),
+  openCredit: () => ipcRenderer.send(POPUP_CHANNELS.openCredit),
 };
 
 contextBridge.exposeInMainWorld('honyoPopup', api);

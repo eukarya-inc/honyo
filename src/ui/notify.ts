@@ -17,6 +17,8 @@ import type { NotificationStyle } from '../config/types.ts';
 export interface Notice {
   title: string;
   body: string;
+  /** Called when the user clicks the notice (both styles). */
+  onClick?: () => void;
 }
 
 const TOAST_WIDTH = 360;
@@ -28,6 +30,7 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), '../..');
 
 let toast: BrowserWindow | null = null;
 let hideTimer: NodeJS.Timeout | undefined;
+let toastClick: (() => void) | undefined;
 
 // Set once an OS notification has failed this session, so `auto` goes
 // straight to the toast instead of failing every time.
@@ -46,7 +49,8 @@ function toastBounds(): Electron.Rectangle {
 }
 
 /** Show Honyo's own toast (replacing one that is still on screen). */
-export function showToast({ title, body }: Notice): void {
+export function showToast({ title, body, onClick }: Notice): void {
+  toastClick = onClick;
   if (!toast || toast.isDestroyed()) {
     toast = new BrowserWindow({
       ...toastBounds(),
@@ -71,9 +75,12 @@ export function showToast({ title, body }: Notice): void {
     toast.on('closed', () => {
       toast = null;
     });
-    // The page closes itself on click by navigating to #close.
+    // A click navigates the page to #close: run the notice's action, then close.
     toast.webContents.on('did-navigate-in-page', (_e, url) => {
-      if (url.endsWith('#close')) toast?.close();
+      if (!url.endsWith('#close')) return;
+      toastClick?.();
+      toastClick = undefined;
+      toast?.close();
     });
   } else {
     toast.setBounds(toastBounds());
@@ -111,6 +118,7 @@ export async function captureToastTo(path: string): Promise<boolean> {
 function showSystem(notice: Notice, onFailed?: () => void): void {
   // Silent: Honyo plays its own sound (Settings -> General), in every mode.
   const n = new Notification({ title: notice.title, body: notice.body, silent: true });
+  if (notice.onClick) n.on('click', notice.onClick);
   n.on('failed', (_e, error) => {
     console.warn('System notification failed:', error);
     onFailed?.();

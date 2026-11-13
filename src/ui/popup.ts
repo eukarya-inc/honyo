@@ -1,4 +1,6 @@
 import { BrowserWindow, screen, ipcMain, clipboard, Menu, app } from 'electron';
+import { openPlamoLicense } from '../local/app.ts';
+import { POPUP_CHANNELS } from '../ipc/popup.ts';
 import { describeError } from '../translation/errors.ts';
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -38,6 +40,7 @@ let pendingLanguages: { sourceLanguage: string; targetLanguage: string } | null 
 let pendingChunk: string | null = null;
 let pendingStatus: string | null = null;
 let pendingError: string | null = null;
+let pendingCredit: string | null = null;
 let pendingComplete: string | null = null;
 
 // Send the current popup display config (read fresh so settings changes apply to
@@ -117,6 +120,7 @@ export function showTranslationPopup(translation: string | null, originalText: s
   pendingComplete = null;
   pendingStatus = null;
   pendingError = null;
+  pendingCredit = null;
 
   // Get cursor position with DPI scaling consideration
   const cursorPoint = screen.getCursorScreenPoint();
@@ -202,6 +206,9 @@ export function showTranslationPopup(translation: string | null, originalText: s
     if (pendingStatus !== null) {
       popupWindow?.webContents.send('translation-status', pendingStatus);
     }
+    if (pendingCredit !== null) {
+      popupWindow?.webContents.send('translation-credit', pendingCredit);
+    }
     if (pendingError !== null) {
       popupWindow?.webContents.send('translation-error', pendingError);
     } else if (pendingComplete !== null) {
@@ -249,6 +256,13 @@ export function updatePopupStatus(message: string): void {
   }
 }
 
+export function updatePopupCredit(label: string): void {
+  pendingCredit = label;
+  if (popupWindow && !popupWindow.isDestroyed()) {
+    popupWindow.webContents.send('translation-credit', label);
+  }
+}
+
 export function showPopupError(message: string): void {
   pendingError = message;
   if (popupWindow && !popupWindow.isDestroyed()) {
@@ -277,6 +291,11 @@ export function setupPopupIPC(): void {
     if (popupWindow && !popupWindow.isDestroyed()) {
       popupWindow.close();
     }
+  });
+
+  // The renderer only asks; the URL is fixed here, never taken from the page.
+  ipcMain.on(POPUP_CHANNELS.openCredit, () => {
+    if (pendingCredit) openPlamoLicense();
   });
 
   ipcMain.on('back-translate', (event, text: string) => {

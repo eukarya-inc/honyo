@@ -1,4 +1,6 @@
 // Built-in action: translate text between the active profile's languages.
+import { parseLocalModelKey } from '../local/index.ts';
+import { PLAMO_CREDIT } from '../local/credit.ts';
 import { getConfig } from '../config/index.ts';
 import { translateTextDetailed, translateTextStreamingStrict } from '../translation/index.ts';
 import type { Action, ActionResult } from './types.ts';
@@ -11,7 +13,8 @@ export const translateAction: Action = {
   accepts: ['text'],
   async run(input, ctx): Promise<ActionResult> {
     if (input.kind !== 'text') throw new Error('Translate needs text input');
-    const { targetLanguage, secondaryLanguage } = getConfig();
+    const { targetLanguage, secondaryLanguage, aiModel } = getConfig();
+    if (parseLocalModelKey(aiModel)) ctx.onCredit?.(PLAMO_CREDIT);
 
     if (ctx.streaming && ctx.onChunk) {
       const text = await translateTextStreamingStrict(

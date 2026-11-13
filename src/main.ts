@@ -130,15 +130,20 @@ function initialize(): void {
 
     // Dev aid: HONYO_DEBUG_TRANSLATE=<text> runs the translate action through
     // the full pipeline after HONYO_DEBUG_TRANSLATE_DELAY ms. With
-    // HONYO_DEBUG_TRANSLATE_SHOT=<prefix>, captures the popup 1s in
-    // (<prefix>-wait.png) and after the result (<prefix>-done.png), then quits.
+    // HONYO_DEBUG_TRANSLATE_SHOT=<prefix>, captures the popup and toast 1.5s in
+    // (<prefix>-wait*.png) and after the result (<prefix>-done.png), then quits.
     const debugTranslate = process.env.HONYO_DEBUG_TRANSLATE;
     if (debugTranslate) {
       const delay = Number(process.env.HONYO_DEBUG_TRANSLATE_DELAY ?? 0);
       const shot = process.env.HONYO_DEBUG_TRANSLATE_SHOT;
       setTimeout(() => {
         const started = Date.now();
-        if (shot) setTimeout(() => void capturePopupTo(`${shot}-wait.png`), 1000);
+        if (shot) {
+          setTimeout(() => {
+            void capturePopupTo(`${shot}-wait.png`);
+            void captureToastTo(`${shot}-wait-toast.png`);
+          }, 1500);
+        }
         void runAction('translate', { kind: 'text', text: debugTranslate }).then(async () => {
           console.log(`[debug-translate] done in ${Date.now() - started} ms`);
           if (!shot) return;

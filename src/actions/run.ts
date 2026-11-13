@@ -43,6 +43,10 @@ function summarizeInput(input: ActionInput): string {
   return input.kind === 'text' ? input.text : `[image ${input.png.byteLength} bytes]`;
 }
 
+// A status (e.g. "Loading <model>…") is only notified if the wait lasts this
+// long, so a quick answer doesn't flash a notice first.
+const STATUS_NOTICE_DELAY_MS = 700;
+
 /**
  * Execute the action with the given input and present the result according
  * to the display mode. Errors are shown to the user; nothing is thrown.
@@ -79,13 +83,24 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
 
   if (usePopup) showTranslationPopup(null, inputSummary);
 
+  let statusTimer: NodeJS.Timeout | undefined;
   try {
     let meta: ActionMeta | undefined;
     const result = await action.run(input, {
       signal,
       streaming,
       ...(streaming ? { onChunk: (text: string): void => updatePopupTranslation(text) } : {}),
-      ...(usePopup ? { onStatus: (message: string): void => updatePopupStatus(message) } : {}),
+      onStatus: (message: string): void => {
+        if (usePopup) {
+          updatePopupStatus(message);
+          return;
+        }
+        // Without a popup there is no spinner: if the wait (e.g. a local
+        // model loading) is still going on shortly after, say so.
+        statusTimer ??= setTimeout(() => {
+          if (!signal.aborted) notify({ title: action.name, body: message });
+        }, STATUS_NOTICE_DELAY_MS);
+      },
       ...(usePopup ? { onCredit: (label: string): void => updatePopupCredit(label) } : {}),
       onMeta: (m): void => {
         meta = m;
@@ -145,6 +160,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       });
     }
   } finally {
+    clearTimeout(statusTimer);
     // Only reset state if this is still the current run
     if (currentAbortController?.signal === signal) {
       isRunning = false;

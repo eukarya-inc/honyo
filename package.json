@@ -72,6 +72,7 @@
     "@ai-sdk/xai": "^2.0.93",
     "ai": "^5.0.60",
     "dotenv": "^17.2.3",
+    "eld": "^2.1.1",
     "electron-updater": "^6.6.2",
     "turndown": "^7.2.1",
     "uiohook-napi": "^1.5.4",

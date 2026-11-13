@@ -1,55 +1,40 @@
-// Pure, electron-free helper that derives a language hint from the writing
-// system of the input text. Language detection is otherwise left to the model,
-// but the model tends to over-weight Latin-script product names, acronyms and
-// identifiers ("Honyo", "SRE", "API") and misclassify a Japanese sentence such
-// as "HonyoはSREチームがメンテできる" as English. Scripts like kana or Hangul
-// are unambiguous evidence of the sentence's language, so we hand that to the
-// model as a hint in the system prompt.
+// Pure, electron-free helper that turns the app-side language detection into
+// a hint for the cloud translation prompt. Models tend to over-weight
+// Latin-script product names, identifiers and pasted code ("Honyo", "SRE",
+// "useEffect") and take a Japanese sentence such as
+// "HonyoはSREチームがメンテできる" for English, or the reverse for an English
+// sentence quoting a Japanese word. detectLanguage judges only the prose and
+// votes by words, so its answer is passed to the model as a hint.
+//
+// Plain Latin text gets no hint: the model tells Latin languages apart better
+// than n-grams do.
 
-// [script, what it says about the sentence]. Order matters: kana before Han.
-const SCRIPTS: Array<[RegExp, string, string]> = [
-  [/[぀-ヿㇰ-ㇿｦ-ﾟ]/, 'Japanese kana (hiragana/katakana)', 'Japanese'],
-  [/[가-힯ᄀ-ᇿ㄰-㆏]/, 'Hangul', 'Korean'],
-  [/[฀-๿]/, 'Thai script', 'Thai'],
-  [/[֐-׿]/, 'Hebrew script', 'Hebrew'],
-  [/[԰-֏]/, 'Armenian script', 'Armenian'],
-  [/[Ⴀ-ჿ]/, 'Georgian script', 'Georgian'],
-  [/[ঀ-৿]/, 'Bengali script', 'Bengali'],
-  [/[਀-੿]/, 'Gurmukhi script', 'Punjabi'],
-  [/[઀-૿]/, 'Gujarati script', 'Gujarati'],
-  [/[஀-௿]/, 'Tamil script', 'Tamil'],
-  [/[ఀ-౿]/, 'Telugu script', 'Telugu'],
-  [/[ഀ-ൿ]/, 'Malayalam script', 'Malayalam'],
-  [/[඀-෿]/, 'Sinhala script', 'Sinhala'],
-  [/[ក-៿]/, 'Khmer script', 'Khmer'],
-  [/[က-႟]/, 'Myanmar script', 'Burmese'],
-  [
-    /[ऀ-ॿ]/,
-    'Devanagari script',
-    'a Devanagari-script language (most likely Hindi, Marathi or Nepali)',
-  ],
-  [/[؀-ۿ]/, 'Arabic script', 'an Arabic-script language (most likely Arabic, Persian or Urdu)'],
-  [
-    /[Ѐ-ӿ]/,
-    'Cyrillic script',
+import { detectLanguage, extractProse, type Script } from '../language/detect.ts';
+
+const GROUPS: Partial<Record<Script, string>> = {
+  han: 'Chinese (it has Han characters but no kana)',
+  cyrillic:
     'a Cyrillic-script language (most likely Russian, Ukrainian, Bulgarian, Serbian, Belarusian or Kazakh)',
-  ],
-];
-const HAN_RE = /[一-鿿㐀-䶿]/;
+  arabic: 'an Arabic-script language (most likely Arabic, Persian or Urdu)',
+  devanagari: 'a Devanagari-script language (most likely Hindi, Marathi or Nepali)',
+};
+
+const NON_LATIN_LETTER = /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u;
 
 /**
- * Return a short, human-readable hint about the language implied by the
- * input's writing system, or undefined when the script alone says nothing
- * useful (e.g. pure Latin text, which could be any of many languages).
+ * A one-line hint about the language of the input's prose, or undefined when
+ * there is nothing useful to say (plain Latin-script prose, empty input).
  */
 export function detectScriptHint(text: string): string | undefined {
-  for (const [re, script, language] of SCRIPTS) {
-    if (re.test(text)) {
-      return `The input contains ${script}, so the sentence itself is written in ${language} even if it also contains Latin-script names, acronyms, or code.`;
-    }
+  const d = detectLanguage(text);
+  if (!d.script || !d.language) return undefined;
+
+  if (d.script === 'latin') {
+    // Only worth saying when other scripts or code could mislead the model.
+    const mixed = NON_LATIN_LETTER.test(text) || extractProse(text).trim() !== text.trim();
+    if (!mixed) return undefined;
   }
-  if (HAN_RE.test(text)) {
-    return 'The input contains Han characters but no kana, so the sentence itself is most likely written in Chinese even if it also contains Latin-script names, acronyms, or code.';
-  }
-  return undefined;
+
+  const language = GROUPS[d.script] ?? d.language;
+  return `Judging by its sentence structure, the input is written in ${language}. Names, acronyms, quoted terms and code in other languages or scripts do not change that.`;
 }

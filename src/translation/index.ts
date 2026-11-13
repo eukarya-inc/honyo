@@ -24,7 +24,7 @@ function buildSystemPrompt(
 ): string {
   const customPromptSection = customPrompt ? `\n\nAdditional instructions:\n${customPrompt}` : '';
   const scriptHint = detectScriptHint(text);
-  const scriptHintSection = scriptHint ? `\n   Script hint for this input: ${scriptHint}` : '';
+  const scriptHintSection = scriptHint ? `\n   Language hint for this input: ${scriptHint}` : '';
 
   const allLanguages = [...languages];
   if (customLanguages && customLanguages.length > 0) {

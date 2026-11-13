@@ -3,12 +3,8 @@
 // drive the same code from plain Node.
 
 import { DEFAULT_LOCAL_MODEL, LOCAL_MODELS } from './catalog.ts';
-import {
-  buildPfml3Prompt,
-  guessSourceLanguage,
-  isInPrimaryLanguage,
-  plamoLanguageCode,
-} from './pfml3.ts';
+import { pickDirection } from '../language/detect.ts';
+import { buildPfml3Prompt, plamoLanguageCode } from './pfml3.ts';
 import { findServerBinary, isModelInstalled, modelPath } from './runtime.ts';
 import { LocalServer } from './server.ts';
 
@@ -83,9 +79,11 @@ export async function translateLocal(
   if (!m) throw new Error(`Unknown local model: ${modelId}`);
   if (!isModelInstalled(base, modelId)) throw new Error(`${m.name} is not downloaded`);
 
-  const inPrimary = isInPrimaryLanguage(text, primaryLanguage, secondaryLanguage);
-  const sourceLanguage = inPrimary ? primaryLanguage : guessSourceLanguage(text, secondaryLanguage);
-  const targetLanguage = inPrimary ? secondaryLanguage : primaryLanguage;
+  const { source: sourceLanguage, target: targetLanguage } = pickDirection(
+    text,
+    primaryLanguage,
+    secondaryLanguage,
+  );
   const targetCode = plamoLanguageCode(targetLanguage);
   if (!targetCode) throw new Error(`${targetLanguage} is not supported by ${m.name}`);
   // Only the target is certain; the source is a guess when it isn't primary.

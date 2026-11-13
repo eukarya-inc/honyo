@@ -32,6 +32,18 @@ describe('detectScriptHint', () => {
     expect(detectScriptHint('გამარჯობა')).toContain('Georgian');
   });
 
+  it('names English for an English sentence quoting Japanese', () => {
+    expect(detectScriptHint('In Japanese, ありがとうございます means thank you')).toContain(
+      'written in English',
+    );
+  });
+
+  it('judges Japanese prose around pasted code', () => {
+    expect(
+      detectScriptHint("TypeError: Cannot read properties of undefined (reading 'map') が出ます"),
+    ).toContain('written in Japanese');
+  });
+
   it('returns undefined for pure Latin text', () => {
     expect(detectScriptHint('The SRE team can maintain Honyo')).toBeUndefined();
   });

@@ -22,334 +22,137 @@
 
 ## Installation
 
-### Download
-
-Download the latest version from [GitHub Releases](https://github.com/rot1024/honyo/releases).
-
-**System requirements:** macOS 13 Ventura or later (Apple Silicon or Intel), Windows 10 or later
-(x64), or Linux (x64). 32-bit systems are not supported.
-
-#### Which file to download?
-
-**Windows:**
-- `Honyo-{version}.exe` - Windows installer (recommended)
-- `Honyo-{version}-win.zip` - Portable version (no installation required)
-
-**macOS:**
-- **Apple Silicon (M1/M2/M3 Macs):**
-  - `Honyo-{version}-arm64.dmg` - DMG installer (recommended)
-  - `Honyo-{version}-arm64-mac.zip` - ZIP archive
-- **Intel Macs:**
-  - `Honyo-{version}.dmg` - DMG installer (recommended)
-  - `Honyo-{version}-mac.zip` - ZIP archive
-
-**Linux:**
-- `Honyo-{version}.AppImage` - Universal Linux package (recommended)
-- `Honyo-{version}.deb` - Debian/Ubuntu package
-- `Honyo-{version}.rpm` - Red Hat/Fedora package
-- `Honyo-{version}.tar.gz` - Generic Linux archive
+Requires macOS 13 Ventura or later (Apple Silicon or Intel), Windows 10 or later (x64), or Linux (x64).
 
 ### macOS
 
-1. Download the appropriate version for your Mac from the downloads section above
+With [Homebrew](https://brew.sh):
 
-2. **For DMG files**:
-   - Open the DMG file
-   - Drag Honyo.app to your Applications folder
+```bash
+brew install --cask eukarya-inc/tap/honyo
+```
 
-3. **For ZIP files**:
-   - Extract the zip file
-   - Move `Honyo.app` to your Applications folder
+Or download `Honyo-<version>-arm64.dmg` (Apple Silicon) or `Honyo-<version>.dmg` (Intel) from
+[Releases](https://github.com/eukarya-inc/honyo/releases) and drag Honyo.app to Applications.
 
-4. **Remove quarantine attribute** (required for unsigned apps):
-   ```bash
-   xattr -cr /Applications/Honyo.app
-   ```
+Honyo isn't signed yet, so before the first launch clear the quarantine flag:
 
-5. **First launch**: Right-click (or Control-click) on Honyo.app and select "Open", then click "Open" in the security dialog
+```bash
+xattr -cr /Applications/Honyo.app
+```
 
-6. Grant accessibility permissions:
-   - Open System Preferences > Security & Privacy > Privacy > Accessibility
-   - Add and enable Honyo.app
+On first launch, allow Honyo under System Settings → Privacy & Security → Accessibility; it needs
+this to notice the double Cmd+C.
 
 ### Windows
 
-Download and run `Honyo-*.exe`
+Download and run `Honyo.Setup.<version>.exe` from [Releases](https://github.com/eukarya-inc/honyo/releases).
 
 ### Linux
 
-Download and run `Honyo-*.AppImage`
+Download `Honyo-<version>.AppImage` from [Releases](https://github.com/eukarya-inc/honyo/releases),
+make it executable and run it.
 
-## Configuration
+Honyo updates itself: it checks for new versions at startup and every hour, and asks before
+installing one.
 
-### API Keys
+## Getting Started
 
-To use the translation features, you need to configure API keys for your preferred AI provider:
+1. Choose how to translate, from the tray icon:
+   - **A cloud model**: open **Settings… → API Keys** and enter a key for
+     [Anthropic](https://platform.claude.com/), [OpenAI](https://platform.openai.com/api-keys),
+     [Google AI](https://aistudio.google.com/app/apikey) or xAI.
+   - **On your computer**: in **Local Models**, download PLaMo 3 Translate (see
+     [Local Translation](#local-translation)).
+2. Select text in any app and press Ctrl+C (Cmd+C on macOS) twice quickly.
+3. The translation is copied to the clipboard and shown in a notification. To read it in a
+   window instead, set **Display Mode** to **Popup Window** in the tray: there **Enter** copies
+   it and closes the popup, **Escape** closes it, and ⇄ shows a back-translation to check the
+   result.
 
-1. Click on the system tray icon
-2. Select "Settings..."
-3. In the "API Keys" tab, enter your API keys for the providers you want to use (Anthropic, OpenAI, Google AI, xAI):
-   - **Anthropic**: Get your key from [platform.claude.com](https://platform.claude.com/)
-   - **OpenAI**: Get your key from [platform.openai.com](https://platform.openai.com/api-keys)
-   - **Google AI**: Get your key from [aistudio.google.com](https://aistudio.google.com/app/apikey)
-4. Click "Save"
+Honyo translates into your **primary** language, and text already in your primary language into
+your **secondary** one. The primary language starts as your system language and the secondary as
+English (Japanese if your system is in English); change them from the tray.
 
-### Settings window
+## Settings
 
-Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
-languages, model, display mode); the Settings window has all of them:
+The tray menu has the everyday switches: profile, languages, model, display mode. **Settings…**
+has everything else.
 
-- **General**: result display mode, notification style, sound, translate shortcut, popup behaviour, history, launch at login
-- **Translation**: primary / secondary language, profile shortcut, AI model, custom model
-- **Customization**: custom prompt (with AI assist), custom languages
-- **API Keys**: per-provider keys and optional gateway endpoints
+### Languages
 
-### History
+61 languages are built in, and you can add others under Settings → Customization → Custom
+Languages.
 
-Every result is kept in a local history (`history.json`, newest first, up to 100 entries) and
-the last 15 appear under **History** in the tray menu; clicking an entry copies its result to
-the clipboard. Settings → General → History lets you turn the history off (the tray submenu
-disappears and nothing new is recorded) or clear it.
+<details>
+<summary>Built-in languages</summary>
 
-### Shortcuts
+English, Japanese, Japanese (Easy), Chinese (Simplified), Chinese (Traditional), Korean, Spanish,
+French, German, Italian, Portuguese, Russian, Arabic, Hindi, Thai, Vietnamese, Indonesian, Malay,
+Filipino, Dutch, Polish, Turkish, Ukrainian, Swedish, Danish, Norwegian, Finnish, Azerbaijani,
+Belarusian, Bulgarian, Bengali, Catalan, Cebuano, Estonian, Basque, Persian, Gujarati, Hebrew,
+Croatian, Hungarian, Armenian, Javanese, Georgian, Kazakh, Khmer, Lithuanian, Latvian, Malayalam,
+Marathi, Burmese, Nepali, Punjabi, Sinhala, Slovak, Slovenian, Serbian, Swahili, Tamil, Telugu,
+Urdu, Uzbek
 
-By default a translation starts when you press Ctrl/Cmd+C twice, which needs no extra setup.
-In Settings → General → Shortcuts you can instead pick a custom global shortcut
-(click the field and press the combination; Backspace clears it). A custom shortcut either
-copies the current selection first — Honyo sends Ctrl/Cmd+C to the active app, so the
-accessibility permission is required on macOS — or translates whatever is already on the
-clipboard.
+</details>
 
-Each profile can also have its own global shortcut (Settings → Translation → Profile
-Shortcut) that switches to it from anywhere. If a combination is already taken by another
-app, Honyo shows a notification and leaves it unassigned.
-
-### Language Settings
-
-The app automatically detects your system language and sets appropriate defaults:
-- If your system is in English: Primary → English, Secondary → Japanese
-- If your system is in Japanese: Primary → Japanese, Secondary → English
-- Other languages: Primary → System language, Secondary → English
-
-You can change these settings from the system tray menu:
-1. Click on "Primary: [Language]" to select your primary translation target
-2. Click on "Secondary: [Language]" to select your fallback language
-
-**Supported Languages (61):**
-English, Japanese, Japanese (Easy), Chinese (Simplified), Chinese (Traditional), Korean, Spanish, French, German, Italian, Portuguese, Russian, Arabic, Hindi, Thai, Vietnamese, Indonesian, Malay, Filipino, Dutch, Polish, Turkish, Ukrainian, Swedish, Danish, Norwegian, Finnish, Azerbaijani, Belarusian, Bulgarian, Bengali, Catalan, Cebuano, Estonian, Basque, Persian, Gujarati, Hebrew, Croatian, Hungarian, Armenian, Javanese, Georgian, Kazakh, Khmer, Lithuanian, Latvian, Malayalam, Marathi, Burmese, Nepali, Punjabi, Sinhala, Slovak, Slovenian, Serbian, Swahili, Tamil, Telugu, Urdu, Uzbek
-
-**Japanese (Easy)** is やさしい日本語: short sentences and everyday words for readers still learning Japanese. Pair it with Japanese to rewrite ordinary Japanese into Easy Japanese, or with another language to translate into it. Both the cloud models and the local PLaMo model support it.
-
-### Profiles
-
-Everything about *what* and *how* you translate lives in a profile: primary/secondary
-languages, the AI model, custom model, custom prompt, custom languages, and the API keys and
-endpoints. Popup, display and startup settings are shared by all profiles.
-
-- Switch profiles from the tray menu (**Profile: …**) or the selector at the top-left of the
-  Settings window.
-- The bottom of that selector's menu has New / Duplicate / Rename / Delete.
-  Duplicating copies the API keys too, which is handy for "same keys, different prompt".
-- On first launch after updating, your existing settings become a profile named **Default**.
-
-### API keys and endpoints
-
-API keys are stored encrypted with the operating system's credential store (Keychain on
-macOS, DPAPI on Windows, libsecret on Linux) inside `config.json`; the old plaintext
-`apikeys.json` is migrated and removed. Environment variables (`ANTHROPIC_API_KEY`, etc.) still
-act as a fallback when a profile has no key.
-
-Each provider also accepts an optional **base URL** (Settings → API Keys → Endpoints) so
-requests can be routed through an LLM gateway or proxy instead of the provider's public API.
-
-### Managed deployment (MDM)
-
-Organisations can supply provider settings centrally instead of handing keys to each
-user. Honyo reads, in this order (later wins), and **enforces** whatever it finds:
-
-| Platform | Source |
-|----------|--------|
-| Any | `managed.json` — macOS `/Library/Application Support/Honyo/managed.json`, Windows `%ProgramData%\Honyo\managed.json`, Linux `/etc/honyo/managed.json` |
-| macOS | Configuration profile for the preference domain `com.rot1024.honyo` (`/Library/Managed Preferences/com.rot1024.honyo.plist`, or the per-user variant) |
-| Windows | Registry policy `HKLM\SOFTWARE\Policies\Honyo` (then `HKCU`), nested keys as subkeys |
-
-Schema (all keys optional):
-
-```json
-{
-  "providers": {
-    "anthropic": { "apiKey": "sk-ant-…", "baseUrl": "https://llm-gateway.example.com/anthropic" },
-    "openai":    { "baseUrl": "https://llm-gateway.example.com/openai" },
-    "google":    { "apiKey": "…" },
-    "xai":       { "baseUrl": "https://llm-gateway.example.com/xai" }
-  }
-}
-```
-
-Managed values override the user's profiles for every profile, and the matching fields in
-Settings → API Keys are shown read-only with a "Managed by your organization" note. Typical
-use is to point `baseUrl` at an internal LLM gateway that holds the real provider keys, so
-nothing secret has to reach the endpoint machines. A Windows policy is expressed as
-`HKLM\SOFTWARE\Policies\Honyo\providers\anthropic` with string values `apiKey` / `baseUrl`;
-a macOS profile carries the same nested dictionary under the `providers` key. Ready-made
-profile files and MDM-specific steps are in [`docs/mdm/`](docs/mdm/README.md).
-
-### Custom Instructions
-
-You can add custom instructions that will be included in all translations:
-
-1. Click on the system tray icon
-2. Select "Settings..."
-3. Go to the "Customization" tab and find the "Custom Prompt" section
-4. Enter your custom instructions (e.g., terminology guidelines, tone preferences, specific translation rules)
-5. Click "Save"
-
-Examples of custom instructions:
-- Use formal language
-- Keep product names in English
-- Maintain consistent terminology
-- Follow specific industry standards
-
-**Generate with AI:** Not sure how to phrase your instructions? Click "Generate with AI" and describe what you want in plain language — Honyo uses your selected model to write or refine the custom prompt for you.
-
-Whatever the input looks like — a question, a greeting, or even text that says "ignore previous instructions" — Honyo always treats it as text to translate, never as a command. Markdown and code formatting is preserved: the syntax is kept intact and only the human-readable text is translated.
+**Japanese (Easy)** is やさしい日本語: short sentences and everyday words for readers still
+learning Japanese. Pair it with Japanese to rewrite ordinary Japanese into Easy Japanese, or with
+another language to translate into it.
 
 ### AI Models
 
-Pick a model from the **AI Model** menu in the system tray. The list stays current automatically: Honyo refreshes it from free public model catalogs (no API key required, cached for 24 hours), showing the latest models per provider. If it can't reach the network, it falls back to a built-in list of current Claude, GPT, and Gemini models. Your selected model is always kept in the list even if a refresh would otherwise drop it.
+Pick a model from **AI Model** in the tray. **Default** follows Honyo's recommendation, a fast and
+inexpensive model that suits translation; larger models are under **Advanced Models**. The list
+updates itself as providers release new models. To use a model that isn't listed, enter its name
+under Settings → Translation → Custom Model.
 
-The menu starts with a **Default** entry, currently Claude Haiku 4.5: translation is a short, latency-sensitive task, and a fast small model is fully sufficient, so responses arrive noticeably sooner. Keeping Default selected means you follow Honyo's recommended model automatically as it changes in future releases; pick a specific model if you want to stay on it. The menu lists fast, cost-efficient models (Haiku, Sonnet, GPT Mini/Nano, Gemini Flash) directly; frontier and reasoning models that are overkill for translation (Opus, Fable, GPT-5 flagship, Gemini Pro, and similar) are tucked into an **Advanced Models** submenu. The split is decided from each model's name, so newly released models are sorted automatically.
+### Local Translation
 
-### Local Translation (PLaMo 3 Translate)
+[PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF) by Preferred Networks
+runs on your computer: no API key is needed, and your text never leaves the machine.
 
-Honyo can translate on your own computer with [PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF)
-by Preferred Networks, run by [llama.cpp](https://github.com/ggml-org/llama.cpp). No API key is
-needed and the text never leaves the machine.
+- Download it from **Local Models** in the tray: **2B** (about 1.8 GB) or the lighter, faster
+  **0.8B** (about 0.6 GB). It then appears in **AI Model**.
+- It is free for personal and non-commercial use under the
+  [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en);
+  commercial use requires registering with PFN.
+- The **Local Models** menu shows whether the model is loaded, and lets you delete a model or
+  open the folder holding it. A loaded model takes about its file size in memory and is unloaded
+  after 30 minutes without use.
+- It covers 53 of Honyo's languages (not Portuguese, Turkish, Ukrainian, Swedish, Danish,
+  Norwegian or Finnish), and doesn't follow custom instructions.
 
-1. In the tray's **Local Models** menu, choose **Download PLaMo 3 Translate 2B (Local)…** (about
-   1.8 GB) or **0.8B** (about 0.6 GB, lighter and faster, slightly less natural).
-2. Accept the [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en).
-   Personal and non-commercial use is free; commercial use requires registering with PFN (free up to
-   1 billion yen in revenue), and a separate agreement above that.
-3. Honyo downloads the model and the llama.cpp runtime (both pinned and checksum-verified), then the
-   model appears in the **AI Model** menu.
+### Custom Instructions
 
-The **Local Models** menu title shows what the model is doing (Loading…, Ready, Not loaded, or the
-download progress). From it you can switch to or delete each downloaded model, and open the folder
-holding them (Show in Finder / Explorer). Results of a local model carry a "Built with PLaMo"
-line in the popup that links to the license.
+Under Settings → Customization, add instructions sent with every translation, such as "Use formal
+language" or "Keep product names in English". **Generate…** writes them from a short description.
 
-The model is loaded when Honyo starts (or when you select it) and unloaded after 30 minutes without
-use or when you switch to a cloud model. It uses roughly the model's file size in memory plus a few
-hundred MB. Files are kept in `local-models/` in Honyo's data directory.
+### Profiles
 
-The model supports 53 languages; Portuguese, Turkish, Ukrainian, Swedish, Danish, Norwegian and
-Finnish from Honyo's list are not among them. Since a translation model takes no instructions,
-custom instructions don't apply, and Honyo itself decides the direction from the text.
+A profile holds languages, model, instructions and API keys, so you can keep separate setups for
+work, personal use or each client. Switch from **Profile** in the tray or the selector in
+Settings, where you can also create, duplicate, rename and delete profiles. Each profile can have
+its own global shortcut.
 
-### Custom AI Models
+### Display and Notifications
 
-Use any AI model not included in the list:
+- **Popup** shows the result in a floating window you can resize; **Notification & Copy** copies
+  the result and shows a notification.
+- If system notifications can't be shown (as with the unsigned app on macOS), Honyo shows its
+  own. Settings → General → Notifications chooses which.
+- **Play a sound** chimes when a translation is ready.
+- Instead of the double Ctrl/Cmd+C, you can set your own shortcut under Settings → General.
+- Recent results are under **History** in the tray; click one to copy it. History can be turned
+  off or cleared in Settings.
 
-1. Open Settings → "Customization" tab → "Custom Model" section
-2. Enter the model name (e.g., `gpt-5.6-sol`, `claude-opus-4-8`)
-3. Select the provider (Anthropic, OpenAI, or Google AI)
-4. Click "Save"
-5. Select "Custom Model" from the AI Model menu
+### For Organizations
 
-### Custom Languages
-
-Add languages not included in the default list:
-
-1. Open Settings → "Customization" tab → "Custom Languages" section
-2. Enter language names, one per line (e.g., Esperanto, Sanskrit, Klingon)
-3. Click "Save"
-4. Your custom languages will appear in the Primary/Secondary language menus
-
-### Display Settings
-
-Configure popup window and translation display behavior:
-
-1. Open Settings → "General" tab
-2. **Auto-close on blur**: Enable this option to automatically close the popup window when it loses focus
-3. **Enable streaming**: Enable this option to see translations appear progressively as the AI generates them (popup mode only)
-4. **Popup font size**: Set the translation text size in the popup (10–24px)
-5. **Reset Popup Size**: Restore the popup window to its default size
-6. Click "Save"
-
-**Display Modes:**
-- **Notification & Copy**: Translation result appears as a notification and is automatically copied to clipboard. Settings → General → Notifications chooses system notifications, Honyo's own, or Automatic (system ones, switching to Honyo's when the system can't show them, as for an unsigned app on macOS). **Play a sound** (Settings → General) chimes when a result is ready, in either mode; while a local model is still loading, notification mode says so
-- **Popup Window**: Translation result appears in a floating window with additional features:
-  - Language direction shown in the header (e.g. "English → Japanese")
-  - Real-time streaming (when enabled)
-  - Back-translate button (⇄) to check the result against the source language
-  - Copy button and keyboard shortcuts (Enter to copy, Escape to close)
-  - Right-click context menu for copying selected text or all text
-  - Resizable window — the size is remembered across closes
-  - Auto-return focus to previous application when closed
-
-## Usage
-
-1. Select any text in any application
-2. Press Ctrl+C (Windows/Linux) or Cmd+C (macOS) twice quickly
-3. Depending on your display mode:
-   - **Notification mode**: Translation appears as notification and is copied to clipboard
-   - **Popup mode**: Translation appears in a floating window
-4. In popup mode:
-   - The header shows the detected language direction (e.g. "English → Japanese")
-   - Click the back-translate button (⇄) to translate the result back to the source language and check its quality — click again to toggle between the two views (the header shows the reverse direction while viewing the back-translation)
-   - Press Enter or click "Copy" to copy the translation and close
-   - Press Escape or click "×" to close without copying
-   - Right-click the text for copy options
-
-### Smart Translation
-
-The app intelligently determines the translation direction:
-- If the source text matches your primary language → translates to secondary language
-- If the source text is any other language → translates to primary language
-- For mixed-language text → detects the language with highest word count ratio
-
-### Menu Options
-
-Access these options by clicking the system tray icon:
-- **Primary/Secondary Language**: Set your translation language preferences (61 built-in languages + custom)
-- **Display Mode**: Choose between notification and popup window
-- **AI Model**: Choose which AI model to use for translations (latest Claude, GPT, and Gemini models — auto-updated — or a custom model)
-- **Settings**: Everything above and more — the tray menu is a shortcut to the most-used settings
-- **Pause Translation**: Temporarily disable the translation feature
-- **Stop Current Translation**: Cancel ongoing translation
-- **Check for Updates**: Check for new versions with progress display
-- **Quit**: Exit the application
-
-### Keyboard Shortcuts
-
-- **Ctrl/Cmd+C (twice)**: Trigger translation
-- **Enter** (in popup): Copy and close
-- **Escape** (in popup): Close without copying
-
-### Auto-Update
-
-Honyo automatically checks for updates on startup and every hour:
-- **Update available**: Choose to Download, remind Later, or Skip the version
-- **Downloading**: Progress displayed in menu (e.g., "Downloading Update (45%)...")
-- **Downloaded**: Option to restart and install or install later
-- **Skipped versions**: Won't be notified again until a new version is released
-- **Manual check**: Use "Check for Updates" from the menu
-
-### Environment Variables
-
-You can also set API keys via environment variables:
-- `ANTHROPIC_API_KEY`
-- `OPENAI_API_KEY`
-- `GOOGLE_API_KEY`
-- `XAI_API_KEY`
-
-Create a `.env` file in the project root:
-```env
-ANTHROPIC_API_KEY=your_key_here
-OPENAI_API_KEY=your_key_here
-GOOGLE_API_KEY=your_key_here
-```
+API keys are stored encrypted with the OS credential store. Each provider can be pointed at an LLM
+gateway or proxy (Settings → API Keys → Endpoints), and keys and endpoints can be deployed and
+locked through MDM (macOS configuration profiles, Windows policies, or a `managed.json` file). See
+[docs/mdm](docs/mdm/README.md).
 
 ## Development
 
@@ -361,7 +164,7 @@ GOOGLE_API_KEY=your_key_here
 ### Setup
 
 ```bash
-git clone https://github.com/rot1024/honyo.git
+git clone https://github.com/eukarya-inc/honyo.git
 cd honyo
 npm install
 ```
@@ -371,6 +174,10 @@ npm install
 ```bash
 npm start
 ```
+
+API keys can also come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` and
+`XAI_API_KEY`, for example in a `.env` file at the project root. They are used when a profile has
+no key and are never saved.
 
 ### Scripts
 

@@ -8,6 +8,7 @@ interface Notice {
 }
 
 function render(): void {
+  if (location.hash === '#close') return;
   let notice: Notice = {};
   try {
     notice = JSON.parse(decodeURIComponent(location.hash.slice(1))) as Notice;
@@ -23,6 +24,9 @@ function render(): void {
 }
 
 render();
+// A notice shown while the toast is open only changes the fragment, which
+// does not reload the page.
+window.addEventListener('hashchange', render);
 document.getElementById('toast')?.addEventListener('click', () => {
   location.hash = 'close';
 });

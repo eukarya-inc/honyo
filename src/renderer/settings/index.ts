@@ -358,6 +358,7 @@ async function loadIntoForm(): Promise<void> {
   }
   applyManagedLocks(loaded.managedFields);
   renderProfileMenu(loaded.profiles, loaded.activeProfileId);
+  updateLocalPromptNote();
 }
 
 async function saveAll(): Promise<void> {
@@ -440,7 +441,17 @@ function setupGenerateDialog(): void {
   });
 }
 
+// The custom prompt does nothing for a local model: say so while one is
+// picked (also before saving).
+function updateLocalPromptNote(): void {
+  const model = fields.get('aiModel');
+  const local = model ? String(readField(model)).startsWith('local:') : false;
+  $('#local-prompt-note').hidden = !local;
+}
+
 function setupImmediateSaves(): void {
+  fields.get('aiModel')?.addEventListener('change', updateLocalPromptNote);
+
   // Launch-at-login talks to the OS, so apply it as soon as it is toggled.
   const el = fields.get('openAtLogin');
   el?.addEventListener('toggle', () => {

@@ -374,6 +374,10 @@
             <div class="text">
               <x-label>Additional instructions for translation</x-label>
               <span class="hint">Added to every translation request.</span>
+              <span class="hint" id="local-prompt-note" hidden
+                >Not used while a local model (PLaMo) is selected: it translates without
+                instructions.</span
+              >
             </div>
             <x-texteditor data-field="customPrompt">
               <x-label>e.g. Use formal language, keep product names in English…</x-label>
@@ -383,7 +387,8 @@
             <div class="text">
               <x-label>Generate with AI</x-label>
               <span class="hint"
-                >Describe what you want and let the selected model write the prompt.</span
+                >Describe what you want and let the selected model write the prompt (the Default
+                model while a local model is selected).</span
               >
             </div>
             <x-button id="open-generate-button"><x-label>Generate…</x-label></x-button>

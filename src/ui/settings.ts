@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain, app, shell, nativeTheme, dialog } from 'electron';
-import { LOCAL_MODELS, LOCAL_MODEL_PREFIX } from '../local/index.ts';
+import { describeError } from '../translation/errors.ts';
+import { LOCAL_MODELS, LOCAL_MODEL_PREFIX, parseLocalModelKey } from '../local/index.ts';
 import { isLocalModelReady, syncLocalServer } from '../local/app.ts';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -370,19 +371,30 @@ async function generateCustomPrompt(data: GeneratePromptRequest): Promise<Genera
     const config = getConfig();
     const apiKeys = getApiKeys();
 
+    // The selected model writes the prompt. A local model only translates
+    // (it takes no instructions), so then the Default cloud model does.
+    const usingLocal = parseLocalModelKey(config.aiModel) !== undefined;
+    const modelKey = usingLocal ? DEFAULT_MODEL_KEY : config.aiModel;
+
     let apiKey: string | undefined;
-    if (config.aiModel === CUSTOM_MODEL_ID) {
+    if (modelKey === CUSTOM_MODEL_ID) {
       if (!config.customModel?.provider) {
         return { success: false, error: 'Custom model not configured' };
       }
       apiKey = apiKeys[config.customModel.provider];
     } else {
-      const modelInfo = getModelInfo(config.aiModel);
+      const modelInfo = getModelInfo(modelKey);
       if (modelInfo) apiKey = apiKeys[modelInfo.provider];
+      if (!apiKey && usingLocal) {
+        return {
+          success: false,
+          error: `Writing a prompt needs a cloud model, as the local model only translates. Add an API key for the Default model (${modelInfo?.name ?? 'Default'}).`,
+        };
+      }
     }
     if (!apiKey) return { success: false, error: 'API key not configured' };
 
-    const model = getAIProvider(config.aiModel, apiKeys, config.customModel, getProviderSettings());
+    const model = getAIProvider(modelKey, apiKeys, config.customModel, getProviderSettings());
 
     const systemPrompt = `You are an expert at writing translation instruction prompts.
 Your task is to generate or modify a custom prompt that will be used to guide AI translations.
@@ -403,7 +415,7 @@ Rules:
     return { success: true, prompt: text.trim() };
   } catch (error) {
     console.error('Failed to generate custom prompt:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: describeError(error) };
   }
 }
 

@@ -4,6 +4,7 @@ import { createTrayMenu, describeTranslateTrigger } from './menu.ts';
 import { setMenuUpdateCallback } from '../app/updater.ts';
 import { setModelsChangedCallback } from '../models-remote.ts';
 import { setProfileChangedCallback } from '../config/index.ts';
+import { onLocalStateChange } from '../local/index.ts';
 import { notifySettingsProfilesChanged } from './settings.ts';
 
 let tray: Tray | null = null;
@@ -26,6 +27,8 @@ export function createTray(): Tray {
     if (tray) {
       const menu = createTrayMenu(tray, updateMenu);
       tray.setContextMenu(menu);
+      // Dev aid: HONYO_DEBUG_MENU=1 logs the menu each time it is rebuilt.
+      if (process.env.HONYO_DEBUG_MENU) logMenu(menu);
       tray.setToolTip(`Honyo - ${describeTranslateTrigger()} to translate`);
     }
   };
@@ -41,6 +44,9 @@ export function createTray(): Tray {
     updateMenu();
     notifySettingsProfilesChanged();
   });
+
+  // Rebuild the menu when the local model loads, unloads or downloads
+  onLocalStateChange(updateMenu);
 
   // Create initial menu
   updateMenu();
@@ -67,4 +73,16 @@ export function destroyTray(): void {
     tray.destroy();
     tray = null;
   }
+}
+
+function logMenu(menu: Electron.Menu, depth = 0): void {
+  for (const item of menu.items) {
+    if (item.type === 'separator') continue;
+    const mark = item.checked ? '* ' : '';
+    console.log(
+      `[menu] ${'  '.repeat(depth)}${mark}${item.label}${item.enabled ? '' : ' (disabled)'}`,
+    );
+    if (item.submenu && depth < 1) logMenu(item.submenu, depth + 1);
+  }
+  if (depth === 0) console.log('[menu] ----');
 }

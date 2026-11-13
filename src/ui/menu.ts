@@ -8,13 +8,21 @@ import { languages } from '../language/index.ts';
 import { CUSTOM_MODEL_ID, DEFAULT_MODEL_KEY, type AIModelInfo } from '../models.ts';
 import { getAvailableModels, getModelInfo, getDefaultModelKey } from '../models-remote.ts';
 import { classifyModelTier, type ModelTier } from '../models-tier.ts';
-import { LOCAL_MODELS, LOCAL_MODEL_PREFIX, parseLocalModelKey } from '../local/index.ts';
+import {
+  LOCAL_MODELS,
+  LOCAL_MODEL_PREFIX,
+  localEngineState,
+  parseLocalModelKey,
+} from '../local/index.ts';
 import {
   cancelLocalDownload,
+  deleteLocalModel,
   downloadLocalModel,
   isLocalDownloadRunning,
   isLocalModelReady,
+  localDownloadStatus,
   openPlamoLicense,
+  revealLocalModels,
   syncLocalServer,
 } from '../local/app.ts';
 import {
@@ -75,9 +83,96 @@ export function describeTranslateTrigger(): string {
   return process.platform === 'darwin' ? 'Double ⌘C' : 'Double Ctrl+C';
 }
 
+const REVEAL_LABEL =
+  process.platform === 'darwin'
+    ? 'Show in Finder'
+    : process.platform === 'win32'
+      ? 'Show in Explorer'
+      : 'Show in File Manager';
+
+/** One line on what the local engine is doing, for the tray. */
+function localStatus(aiModel: string): { short: string; long: string } {
+  const download = localDownloadStatus();
+  if (download) return { short: 'Downloading…', long: `Downloading ${download}` };
+  const state = localEngineState();
+  const nameOf = (id: string | undefined): string =>
+    (id && LOCAL_MODELS[id]?.name.replace(/ \(Local\)$/, '')) || 'local model';
+  if (state.state === 'loading') {
+    return { short: 'Loading…', long: `Loading ${nameOf(state.modelId)}…` };
+  }
+  if (state.state === 'ready') {
+    return { short: 'Ready', long: `${nameOf(state.modelId)} is loaded and ready` };
+  }
+  const selected = parseLocalModelKey(aiModel);
+  if (selected && isLocalModelReady(selected)) {
+    return { short: 'Not loaded', long: `${nameOf(selected)} loads on the next translation` };
+  }
+  return { short: '', long: 'Not in use' };
+}
+
+function localModelsMenu(aiModel: string, rebuild: () => void): MenuItemConstructorOptions {
+  const status = localStatus(aiModel);
+  const items: MenuItemConstructorOptions[] = [
+    { label: status.long, enabled: false },
+    { type: 'separator' },
+  ];
+  for (const m of Object.values(LOCAL_MODELS)) {
+    const key = LOCAL_MODEL_PREFIX + m.id;
+    const size = `${(m.size / 1e9).toFixed(1)} GB`;
+    if (isLocalModelReady(m.id)) {
+      items.push({
+        label: `${m.name} · ${size}`,
+        submenu: [
+          {
+            label: aiModel === key ? 'In Use' : 'Use',
+            enabled: aiModel !== key,
+            click: (): void => {
+              updateConfig({ aiModel: key });
+              syncLocalServer(key);
+              rebuild();
+            },
+          },
+          {
+            label: 'Delete…',
+            click: (): void => {
+              void deleteLocalModel(m.id).then(rebuild);
+            },
+          },
+        ],
+      });
+    } else {
+      items.push({
+        label: `Download ${m.name} · ${size}…`,
+        enabled: !isLocalDownloadRunning(),
+        click: (): void => {
+          void downloadLocalModel(m.id).then(ok => {
+            if (ok) {
+              updateConfig({ aiModel: key });
+              syncLocalServer(key);
+            }
+            rebuild();
+          });
+          rebuild();
+        },
+      });
+    }
+  }
+  if (isLocalDownloadRunning()) {
+    items.push({ label: 'Cancel Download', click: cancelLocalDownload });
+  }
+  items.push({ type: 'separator' });
+  items.push({ label: REVEAL_LABEL, click: (): void => void revealLocalModels() });
+  items.push({ label: 'Built with PLaMo: License…', click: openPlamoLicense });
+  return {
+    label: status.short ? `Local Models: ${status.short}` : 'Local Models',
+    submenu: items,
+  };
+}
+
 export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: string) => void): Menu {
   const config = getConfig();
   const isPaused = getPausedState();
+  const rebuild = (): void => tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
 
   // Combine default languages with custom languages
   const allLanguages = [...languages];
@@ -255,37 +350,17 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
           menuItems.push({ label: 'Advanced Models', submenu: advanced });
         }
 
-        // Local models (PLaMo 3 Translate on llama.cpp): selectable once
-        // downloaded, otherwise offered as a download.
-        menuItems.push({ type: 'separator' });
-        for (const m of Object.values(LOCAL_MODELS)) {
+        // Downloaded local models; downloads live in the Local Models menu.
+        const localReady = Object.values(LOCAL_MODELS).filter(m => isLocalModelReady(m.id));
+        if (localReady.length > 0) menuItems.push({ type: 'separator' });
+        for (const m of localReady) {
           const key = LOCAL_MODEL_PREFIX + m.id;
-          if (isLocalModelReady(m.id)) {
-            menuItems.push({
-              label: m.name,
-              type: 'radio',
-              checked: config.aiModel === key,
-              click: (): void => select(key),
-            });
-          } else {
-            menuItems.push({
-              label: `Download ${m.name}…`,
-              enabled: !isLocalDownloadRunning(),
-              click: (): void => {
-                void downloadLocalModel(m.id, label => tray?.setTitle(label)).then(ok => {
-                  if (ok) select(key);
-                  else tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-                });
-                tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
-              },
-            });
-          }
-        }
-        if (isLocalDownloadRunning()) {
-          menuItems.push({ label: 'Cancel Download', click: cancelLocalDownload });
-        }
-        if (Object.values(LOCAL_MODELS).some(m => isLocalModelReady(m.id))) {
-          menuItems.push({ label: 'Built with PLaMo: License…', click: openPlamoLicense });
+          menuItems.push({
+            label: m.name,
+            type: 'radio',
+            checked: config.aiModel === key,
+            click: (): void => select(key),
+          });
         }
 
         menuItems.push({ type: 'separator' });
@@ -299,6 +374,7 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         return menuItems;
       })(),
     },
+    localModelsMenu(config.aiModel, rebuild),
     ...(config.historyEnabled !== false
       ? [
           {

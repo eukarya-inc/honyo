@@ -2,12 +2,22 @@
 // started from the tray (license consent -> download -> progress).
 
 import { PLAMO_LICENSE_URL } from './credit.ts';
-import { getConfig, updateConfig } from '../config/index.ts';
+import { getConfig, notifyConfigChanged, updateConfig } from '../config/index.ts';
 import { app, dialog, shell } from 'electron';
 import { join } from 'path';
 import { LOCAL_MODELS } from './catalog.ts';
 import { installModel, installRuntime, isModelInstalled } from './runtime.ts';
-import { parseLocalModelKey, stopLocalServer, warmupLocal } from './index.ts';
+import {
+  LOCAL_MODEL_PREFIX,
+  localEngineState,
+  notifyState,
+  parseLocalModelKey,
+  stopLocalServer,
+  warmupLocal,
+} from './index.ts';
+import { modelPath } from './runtime.ts';
+import { mkdir, rm } from 'fs/promises';
+import { DEFAULT_MODEL_KEY } from '../models.ts';
 import { notify } from '../ui/notify.ts';
 
 export function localBaseDir(): string {
@@ -35,6 +45,12 @@ export function syncLocalServer(aiModel: string): void {
 }
 
 let inFlight: AbortController | undefined;
+let downloadStatus = '';
+
+/** e.g. "PLaMo 3 Translate 2B (Local): 45%" while a download runs, else "". */
+export function localDownloadStatus(): string {
+  return downloadStatus;
+}
 
 export function isLocalDownloadRunning(): boolean {
   return !!inFlight;
@@ -82,7 +98,9 @@ export async function downloadLocalModel(
       const pct = p.total ? Math.floor((p.received / p.total) * 100) : 0;
       if (pct === last) return;
       last = pct;
-      onProgress?.(`${what === 'runtime' ? 'Runtime' : m.name}: ${pct}%`);
+      downloadStatus = `${what === 'runtime' ? 'llama.cpp runtime' : m.name}: ${pct}%`;
+      onProgress?.(downloadStatus);
+      notifyState();
     };
     await installRuntime(base, { signal: inFlight.signal, onProgress: progress });
     last = -1;
@@ -100,8 +118,57 @@ export async function downloadLocalModel(
     return false;
   } finally {
     inFlight = undefined;
+    downloadStatus = '';
     onProgress?.('');
+    notifyState();
   }
+}
+
+/** Open the folder holding the downloaded models in Finder / Explorer. */
+export async function revealLocalModels(): Promise<void> {
+  const dir = join(localBaseDir(), 'models');
+  await mkdir(dir, { recursive: true });
+  const error = await shell.openPath(dir);
+  if (error) console.error('Could not open the models folder:', error);
+}
+
+/**
+ * Delete a downloaded model after confirmation. A profile using it falls back
+ * to the default model; with no model left, the runtime is removed too.
+ */
+export async function deleteLocalModel(modelId: string): Promise<boolean> {
+  const m = LOCAL_MODELS[modelId];
+  if (!m || !isLocalModelReady(modelId)) return false;
+  const others = Object.values(LOCAL_MODELS).filter(
+    o => o.id !== modelId && isLocalModelReady(o.id),
+  );
+  const { response } = await dialog.showMessageBox({
+    type: 'warning',
+    message: `Delete ${m.name}?`,
+    detail:
+      `This frees about ${(m.size / 1e9).toFixed(1)} GB. You can download it again from the tray.` +
+      (others.length
+        ? ''
+        : ' The llama.cpp runtime is removed as well, as no other local model uses it.'),
+    buttons: ['Delete', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  if (response !== 0) return false;
+
+  const key = LOCAL_MODEL_PREFIX + modelId;
+  if (getConfig().aiModel === key) updateConfig({ aiModel: DEFAULT_MODEL_KEY });
+  // The server may have this file open; stop it before removing it.
+  if (localEngineState().state !== 'stopped') stopLocalServer();
+
+  const base = localBaseDir();
+  const file = modelPath(base, m);
+  await rm(file, { force: true });
+  await rm(`${file}.part`, { force: true });
+  if (!others.length) await rm(join(base, 'runtime'), { recursive: true, force: true });
+  notifyState();
+  notifyConfigChanged();
+  return true;
 }
 
 export function openPlamoLicense(): void {

@@ -66,7 +66,25 @@ interface Running {
   keyFile: string;
 }
 
+export type ServerState =
+  | { state: 'stopped' }
+  | { state: 'loading'; modelPath: string }
+  | { state: 'ready'; modelPath: string };
+
 export class LocalServer {
+  /** Called whenever state() may have changed (for the tray's status line). */
+  onStateChange: (() => void) | undefined;
+
+  state(): ServerState {
+    if (this.starting) return { state: 'loading', modelPath: this.starting.modelPath };
+    if (this.running) return { state: 'ready', modelPath: this.running.modelPath };
+    return { state: 'stopped' };
+  }
+
+  private changed(): void {
+    this.onStateChange?.();
+  }
+
   private running: Running | undefined;
   private starting: { modelPath: string; promise: Promise<Running> } | undefined;
   private idleTimer: NodeJS.Timeout | undefined;
@@ -133,7 +151,10 @@ export class LocalServer {
     if (child.pid) void writeFile(this.pidFile, String(child.pid));
     child.on('exit', () => {
       this.children.delete(child);
-      if (this.running?.child === child) this.running = undefined;
+      if (this.running?.child === child) {
+        this.running = undefined;
+        this.changed();
+      }
       void rm(keyFile, { force: true });
       void readFile(this.pidFile, 'utf8')
         .then(p => (p.trim() === String(child.pid) ? rm(this.pidFile, { force: true }) : undefined))
@@ -172,15 +193,19 @@ export class LocalServer {
       const promise = this.start(modelPath);
       const entry = { modelPath, promise };
       this.starting = entry;
+      this.changed();
       void promise
         .finally(() => {
           if (this.starting === entry) this.starting = undefined;
         })
-        .catch(() => {});
+        // On success `running` is set below before announcing; a failed start
+        // has to announce that it is no longer loading.
+        .catch(() => this.changed());
     }
     const running = await this.starting.promise;
     if (this.running && this.running !== running) this.running.child.kill();
     this.running = running;
+    this.changed();
     return running;
   }
 
@@ -218,6 +243,7 @@ export class LocalServer {
     for (const child of this.children) child.kill();
     this.running = undefined;
     this.starting = undefined;
+    this.changed();
   }
 
   /**

@@ -105,7 +105,7 @@ To use the translation features, you need to configure API keys for your preferr
 Open **Settings…** from the tray. The tray menu only exposes the most-used switches (profile,
 languages, model, display mode); the Settings window has all of them:
 
-- **General**: result display mode, notification style, translate shortcut, popup behaviour, history, launch at login
+- **General**: result display mode, notification style, sound, translate shortcut, popup behaviour, history, launch at login
 - **Translation**: primary / secondary language, profile shortcut, AI model, custom model
 - **Customization**: custom prompt (with AI assist), custom languages
 - **API Keys**: per-provider keys and optional gateway endpoints
@@ -230,13 +230,18 @@ Honyo can translate on your own computer with [PLaMo 3 Translate](https://huggin
 by Preferred Networks, run by [llama.cpp](https://github.com/ggml-org/llama.cpp). No API key is
 needed and the text never leaves the machine.
 
-1. In the tray's **AI Model** menu, choose **Download PLaMo 3 Translate 2B (Local)…** (about 1.8 GB)
-   or **0.8B** (about 0.6 GB, lighter and faster, slightly less natural).
+1. In the tray's **Local Models** menu, choose **Download PLaMo 3 Translate 2B (Local)…** (about
+   1.8 GB) or **0.8B** (about 0.6 GB, lighter and faster, slightly less natural).
 2. Accept the [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en).
    Personal and non-commercial use is free; commercial use requires registering with PFN (free up to
    1 billion yen in revenue), and a separate agreement above that.
 3. Honyo downloads the model and the llama.cpp runtime (both pinned and checksum-verified), then the
-   model appears in the menu.
+   model appears in the **AI Model** menu.
+
+The **Local Models** menu title shows what the model is doing (Loading…, Ready, Not loaded, or the
+download progress). From it you can switch to or delete each downloaded model, and open the folder
+holding them (Show in Finder / Explorer). Results of a local model carry a "Built with PLaMo"
+line in the popup that links to the license.
 
 The model is loaded when Honyo starts (or when you select it) and unloaded after 30 minutes without
 use or when you switch to a cloud model. It uses roughly the model's file size in memory plus a few
@@ -277,7 +282,7 @@ Configure popup window and translation display behavior:
 6. Click "Save"
 
 **Display Modes:**
-- **Notification & Copy**: Translation result appears as a notification and is automatically copied to clipboard. Settings → General → Notifications chooses system notifications, Honyo's own, or Automatic (system ones, switching to Honyo's when the system can't show them, as for an unsigned app on macOS)
+- **Notification & Copy**: Translation result appears as a notification and is automatically copied to clipboard. Settings → General → Notifications chooses system notifications, Honyo's own, or Automatic (system ones, switching to Honyo's when the system can't show them, as for an unsigned app on macOS). **Play a sound** (Settings → General) chimes when a result is ready, in either mode; while a local model is still loading, notification mode says so
 - **Popup Window**: Translation result appears in a floating window with additional features:
   - Language direction shown in the header (e.g. "English → Japanese")
   - Real-time streaming (when enabled)
@@ -399,6 +404,7 @@ npm start
 | `HONYO_DEBUG_ECHO=text` | Run a no-network echo action through the popup/notification and history pipeline, then quit |
 | `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
 | `HONYO_DEBUG_TRANSLATE=text` | Run one translation through the full pipeline (after `HONYO_DEBUG_TRANSLATE_DELAY` ms); with `HONYO_DEBUG_TRANSLATE_SHOT=prefix`, capture the popup and toast to `prefix-*.png` and quit |
+| `HONYO_DEBUG_MENU=1` | Log the tray menu each time it is rebuilt |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB`, `HONYO_SETTINGS_SCREENSHOT_SCRIPT` to run JS first, and `HONYO_THEME=light\|dark`) |
 
 ### Project Structure

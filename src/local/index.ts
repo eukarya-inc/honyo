@@ -31,6 +31,33 @@ export interface LocalTranslation {
 // each start a process and the untracked one would outlive the app.
 let server: { base: string; srv: Promise<LocalServer>; ready?: LocalServer } | undefined;
 
+export type LocalEngineState =
+  { state: 'stopped' } | { state: 'loading' | 'ready'; modelId: string | undefined };
+
+const stateListeners: Array<() => void> = [];
+
+/** Subscribe to local engine state changes (loading, ready, stopped). */
+export function onLocalStateChange(listener: () => void): void {
+  stateListeners.push(listener);
+}
+
+/** Also used for download progress, which the same status line shows. */
+export function notifyState(): void {
+  for (const listener of stateListeners) listener();
+}
+
+/** What the local engine is doing now, for status displays. */
+export function localEngineState(): LocalEngineState {
+  const s = server?.ready?.state() ?? { state: 'stopped' as const };
+  if (s.state === 'stopped') {
+    // Looking up the runtime counts as loading too.
+    if (server && !server.ready && !shutDown) return { state: 'loading', modelId: undefined };
+    return s;
+  }
+  const modelId = Object.values(LOCAL_MODELS).find(m => s.modelPath.endsWith(m.file))?.id;
+  return { state: s.state, modelId };
+}
+
 // Set when the app quits: no server may start after that, even one whose
 // start was already on its way (the launch warm-up).
 let shutDown = false;
@@ -44,12 +71,18 @@ function getServer(base: string): Promise<LocalServer> {
     const bin = await findServerBinary(base);
     if (!bin) throw new Error('Local runtime is not installed');
     const srv = new LocalServer(bin, base);
+    srv.onStateChange = notifyState;
     if (shutDown) srv.shutDown();
     return srv;
   })();
   const entry: { base: string; srv: Promise<LocalServer>; ready?: LocalServer } = { base, srv };
   server = entry;
-  void srv.then(s => (entry.ready = s)).catch(() => {});
+  void srv
+    .then(s => {
+      entry.ready = s;
+      notifyState();
+    })
+    .catch(() => notifyState());
   // Let a failed lookup (runtime not installed yet) be retried next time.
   srv.catch(() => {
     if (server === entry) server = undefined;

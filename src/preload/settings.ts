@@ -30,7 +30,7 @@ const api: HonyoSettingsApi = {
     ipcRenderer.on(SETTINGS_EVENTS.profilesChanged, () => handler());
   },
   closeCancelled: () => ipcRenderer.send(SETTINGS_CHANNELS.closeCancelled),
-  ready: () => ipcRenderer.send(SETTINGS_CHANNELS.ready),
+  ready: (background: string) => ipcRenderer.send(SETTINGS_CHANNELS.ready, background),
   onSaveAndClose: (handler: () => void) => {
     ipcRenderer.on(SETTINGS_EVENTS.saveAndClose, () => handler());
   },

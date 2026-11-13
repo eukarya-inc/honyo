@@ -94,7 +94,18 @@ export function openSettingsWindow(): void {
   const reveal = (): void => {
     if (!win.isDestroyed() && !win.isVisible()) win.show();
   };
-  ipcMain.once(SETTINGS_CHANNELS.ready, reveal);
+  ipcMain.once(SETTINGS_CHANNELS.ready, (_event, background: unknown) => {
+    // Paint the window itself in the theme's colour: what shows for a frame
+    // when the page is torn down on close.
+    if (typeof background === 'string' && background && !win.isDestroyed()) {
+      try {
+        win.setBackgroundColor(background);
+      } catch {
+        // not a colour Electron understands; keep the default
+      }
+    }
+    reveal();
+  });
   // Never stay invisible if the page can't report (e.g. a load error).
   setTimeout(reveal, 2000);
 

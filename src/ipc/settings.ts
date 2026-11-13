@@ -128,8 +128,12 @@ export interface HonyoSettingsApi {
   onSaveAndClose(handler: () => void): void;
   /** Tell the main process the window stays open after all (saving failed). */
   closeCancelled(): void;
-  /** The theme is applied and the form painted: the window may be shown. */
-  ready(): void;
+  /**
+   * The theme is applied and the form painted: the window may be shown.
+   * `background` is the page's background colour, which the window takes so
+   * no white shows while it opens or closes.
+   */
+  ready(background: string): void;
 }
 
 export const SETTINGS_EVENTS = {

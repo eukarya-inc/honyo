@@ -476,7 +476,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   void loadIntoForm()
     .then(whenThemeApplied)
-    .finally(() => window.honyo.ready());
+    .finally(() => window.honyo.ready(pageBackground()));
 });
 
 // Resolves once Xel has loaded the theme stylesheet and a frame is painted.
@@ -491,4 +491,18 @@ async function whenThemeApplied(): Promise<void> {
     console.warn('Could not wait for the Xel theme:', error);
   }
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+
+// The page's background as #rrggbb (Electron's setBackgroundColor format).
+function pageBackground(): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  // Let the browser convert whatever the theme uses (e.g. color(srgb …)).
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r = 0, g = 0, b = 0, a = 0] = ctx.getImageData(0, 0, 1, 1).data;
+  if (a === 0) return '';
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }

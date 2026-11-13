@@ -18,9 +18,9 @@ function run(command: string): Promise<void> {
  * text if nothing changed within the timeout (e.g. no selection).
  */
 export async function copySelectionToClipboard(timeoutMs = 400): Promise<string> {
-  const before = clipboard.readText();
+  const before = await clipboard.readText();
   // Clear so an unchanged clipboard can be told apart from a re-copied one.
-  clipboard.writeText('');
+  await clipboard.writeText('');
 
   switch (process.platform) {
     case 'darwin':
@@ -41,11 +41,11 @@ export async function copySelectionToClipboard(timeoutMs = 400): Promise<string>
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const text = clipboard.readText();
+    const text = await clipboard.readText();
     if (text) return text;
     await new Promise(r => setTimeout(r, 40));
   }
   // Nothing was copied: restore the previous clipboard and report it.
-  clipboard.writeText(before);
+  await clipboard.writeText(before);
   return before;
 }

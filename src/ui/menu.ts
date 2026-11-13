@@ -308,7 +308,7 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
                 toolTip:
                   entry.output.length > 400 ? entry.output.slice(0, 400) + '…' : entry.output,
                 click: (): void => {
-                  clipboard.writeText(entry.output);
+                  void clipboard.writeText(entry.output);
                 },
               }));
               if (items.length === 0) items.push({ label: 'No history yet', enabled: false });

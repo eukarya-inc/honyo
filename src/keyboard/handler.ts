@@ -22,7 +22,9 @@ export async function triggerTranslation(options: TriggerOptions = {}): Promise<
     console.log('Translation is paused, ignoring...');
     return;
   }
-  const text = options.copySelectionFirst ? await copySelectionToClipboard() : clipboard.readText();
+  const text = options.copySelectionFirst
+    ? await copySelectionToClipboard()
+    : await clipboard.readText();
   console.log('Clipboard content:', text ? text.slice(0, 50) + '...' : '(empty)');
   if (!text) return;
   await runAction(TRANSLATE_ACTION_ID, { kind: 'text', text });

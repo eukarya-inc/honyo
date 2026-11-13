@@ -265,7 +265,7 @@ export function finalizePopupTranslation(text: string): void {
 
 export function setupPopupIPC(): void {
   ipcMain.on('copy-translation', (event, text: string) => {
-    clipboard.writeText(text);
+    void clipboard.writeText(text);
     if (popupWindow && !popupWindow.isDestroyed()) {
       popupWindow.close();
     }
@@ -317,7 +317,7 @@ export function setupPopupIPC(): void {
           {
             label: 'Copy',
             click: () => {
-              clipboard.writeText(data.selectedText);
+              void clipboard.writeText(data.selectedText);
             },
           },
           { type: 'separator' as const },
@@ -342,8 +342,13 @@ export function setupPopupIPC(): void {
 /** Dev aid: write the popup as it looks right now to `path` (PNG). */
 export async function capturePopupTo(path: string): Promise<void> {
   if (!popupWindow || popupWindow.isDestroyed()) return;
-  const image = await popupWindow.webContents.capturePage();
-  writeFileSync(path, image.toPNG());
+  try {
+    const image = await popupWindow.webContents.capturePage();
+    writeFileSync(path, image.toPNG());
+  } catch (error) {
+    // e.g. the window isn't composited yet (UnknownVizError on Electron 45)
+    console.warn(`Could not capture the popup to ${path}:`, error);
+  }
 }
 
 export function debugCapturePopup(path: string): void {

@@ -95,9 +95,14 @@ export function showToast({ title, body }: Notice): void {
 /** Dev aid: write the toast as it looks right now to `path` (PNG). */
 export async function captureToastTo(path: string): Promise<boolean> {
   if (!toast || toast.isDestroyed()) return false;
-  const { writeFileSync } = await import('fs');
-  writeFileSync(path, (await toast.webContents.capturePage()).toPNG());
-  return true;
+  try {
+    const { writeFileSync } = await import('fs');
+    writeFileSync(path, (await toast.webContents.capturePage()).toPNG());
+    return true;
+  } catch (error) {
+    console.warn(`Could not capture the toast to ${path}:`, error);
+    return false;
+  }
 }
 
 function showSystem(notice: Notice, onFailed?: () => void): void {

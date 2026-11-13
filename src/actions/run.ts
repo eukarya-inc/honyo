@@ -104,7 +104,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       }
     } else {
       // Notification mode: copy to clipboard and show notification
-      clipboard.writeText(result.text);
+      await clipboard.writeText(result.text);
       notify({
         title: `${action.name} Result`,
         body: result.text.length > 100 ? result.text.slice(0, 100) + '...' : result.text,

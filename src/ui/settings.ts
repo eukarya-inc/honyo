@@ -86,12 +86,17 @@ export function openSettingsWindow(): void {
     maximizable: true,
     title: 'Settings',
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
-    // Shown once painted, over the theme's own background colour, so it
-    // doesn't flash white before the (dark) theme loads.
+    // Hidden until the page reports that the Xel theme is applied, so it
+    // never shows unstyled (white) before the platform's light/dark theme.
     show: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#383838' : '#f5f5f5',
   });
-  settingsWindow.once('ready-to-show', () => settingsWindow?.show());
+  const win = settingsWindow;
+  const reveal = (): void => {
+    if (!win.isDestroyed() && !win.isVisible()) win.show();
+  };
+  ipcMain.once(SETTINGS_CHANNELS.ready, reveal);
+  // Never stay invisible if the page can't report (e.g. a load error).
+  setTimeout(reveal, 2000);
 
   // Closing with unsaved changes: the page's beforeunload vetoes the unload
   // and Electron asks here. Save asks the page to save, then it closes itself.
@@ -107,6 +112,7 @@ export function openSettingsWindow(): void {
     });
     if (choice === 1) event.preventDefault(); // close without saving
     if (choice === 0) settingsWindow.webContents.send(SETTINGS_EVENTS.saveAndClose);
+    if (choice === 2) settleClose(false); // Cancel: the window stays
   });
 
   // External links open in the system browser, never in a new Electron window.
@@ -162,7 +168,29 @@ export function openSettingsWindow(): void {
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;
+    settleClose(true);
   });
+}
+
+// A closeSettingsWindow() waiting to learn whether the window really closed.
+let pendingClose: ((closed: boolean) => void) | undefined;
+
+function settleClose(closed: boolean): void {
+  pendingClose?.(closed);
+  pendingClose = undefined;
+}
+
+/**
+ * Close the settings window as the user would, so unsaved changes are asked
+ * about first. Resolves true once it is closed (or wasn't open), false when
+ * the user chose Cancel or saving failed.
+ */
+export function closeSettingsWindow(): Promise<boolean> {
+  if (!settingsWindow || settingsWindow.isDestroyed()) return Promise.resolve(true);
+  settleClose(false); // a previous request no longer applies
+  const result = new Promise<boolean>(resolve => (pendingClose = resolve));
+  settingsWindow.close();
+  return result;
 }
 
 /** Tell an open settings window that profiles changed elsewhere (tray menu). */
@@ -371,6 +399,7 @@ Rules:
 // --- IPC ---------------------------------------------------------------------
 
 export function setupSettingsIPC(): void {
+  ipcMain.on(SETTINGS_CHANNELS.closeCancelled, () => settleClose(false));
   ipcMain.handle(SETTINGS_CHANNELS.load, (): SettingsSnapshot => snapshot());
 
   ipcMain.handle(SETTINGS_CHANNELS.save, (_event, patch: SettingsPatch): void => {

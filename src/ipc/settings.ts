@@ -103,6 +103,8 @@ export const SETTINGS_CHANNELS = {
   profileRename: 'settings:profile-rename',
   profileDelete: 'settings:profile-delete',
   clearHistory: 'settings:clear-history',
+  closeCancelled: 'settings:close-cancelled',
+  ready: 'settings:ready',
 } as const;
 
 /** API exposed to the settings renderer on `window.honyo` by the preload script. */
@@ -124,6 +126,10 @@ export interface HonyoSettingsApi {
   onProfilesChanged(handler: () => void): void;
   /** Fired when the user chose Save in the unsaved-changes prompt on close. */
   onSaveAndClose(handler: () => void): void;
+  /** Tell the main process the window stays open after all (saving failed). */
+  closeCancelled(): void;
+  /** The theme is applied and the form painted: the window may be shown. */
+  ready(): void;
 }
 
 export const SETTINGS_EVENTS = {

@@ -34,7 +34,7 @@ import {
   getActiveProfileId,
   setActiveProfile,
 } from '../config/index.ts';
-import { openSettingsWindow } from './settings.ts';
+import { closeSettingsWindow, openSettingsWindow } from './settings.ts';
 import {
   checkForUpdates,
   isCheckingUpdate,
@@ -447,9 +447,12 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
       label: 'Quit',
       click: (): void => {
         console.log('Quit menu clicked');
-        // The same cleanup as a signal: keyboard hook, llama-server, tray. It
-        // forces the exit, which skips before-quit handlers.
-        cleanupAndExit();
+        // Close Settings first so unsaved changes are asked about; Cancel
+        // keeps Honyo running. Then the same cleanup as a signal (keyboard
+        // hook, llama-server, tray), which forces the exit.
+        void closeSettingsWindow().then(closed => {
+          if (closed) cleanupAndExit();
+        });
       },
     },
   ]);

@@ -322,7 +322,8 @@ function setupProfiles(): void {
   });
   window.honyo.onSaveAndClose(() => {
     void saveAll().then(() => {
-      if (!hasUnsavedChanges()) window.close();
+      if (hasUnsavedChanges()) window.honyo.closeCancelled();
+      else window.close();
     });
   });
 }
@@ -473,5 +474,21 @@ window.addEventListener('DOMContentLoaded', () => {
       void saveAll();
     }
   });
-  void loadIntoForm();
+  void loadIntoForm()
+    .then(whenThemeApplied)
+    .finally(() => window.honyo.ready());
 });
+
+// Resolves once Xel has loaded the theme stylesheet and a frame is painted.
+// xel.js is the page's module script; importing the same URL here returns
+// that instance (kept out of the bundle by building the URL at runtime).
+async function whenThemeApplied(): Promise<void> {
+  try {
+    const url = new URL('node_modules/xel/xel.js', document.baseURI).href;
+    const xel = (await import(url)) as { default: { whenThemeReady: Promise<void> } };
+    await xel.default.whenThemeReady;
+  } catch (error) {
+    console.warn('Could not wait for the Xel theme:', error);
+  }
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}

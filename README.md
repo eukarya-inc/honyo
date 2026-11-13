@@ -14,6 +14,7 @@
 - ⚡ **Instant Translation** - Double Ctrl/Cmd+C to translate any selected text
 - 🌍 **Multi-Language Support** - 60 built-in languages plus custom language support
 - 🤖 **Auto-Updating AI Models** - Claude, GPT, Gemini, Grok (xAI), and custom models, with the model list kept up to date automatically
+- 💻 **Local Translation** - Download PLaMo 3 Translate and translate on your own computer, with no API key and no text leaving the machine
 - 🔁 **Back-Translation** - Instantly check quality by translating the result back to the source language
 - 🧭 **Language Direction Display** - See the detected source → target language at a glance
 - 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
@@ -30,6 +31,9 @@
 ### Download
 
 Download the latest version from [GitHub Releases](https://github.com/rot1024/honyo/releases).
+
+**System requirements:** macOS 13 Ventura or later (Apple Silicon or Intel), Windows 10 or later
+(x64), or Linux (x64). 32-bit systems are not supported.
 
 #### Which file to download?
 
@@ -220,6 +224,28 @@ Pick a model from the **AI Model** menu in the system tray. The list stays curre
 
 The menu starts with a **Default** entry, currently Claude Haiku 4.5: translation is a short, latency-sensitive task, and a fast small model is fully sufficient, so responses arrive noticeably sooner. Keeping Default selected means you follow Honyo's recommended model automatically as it changes in future releases; pick a specific model if you want to stay on it. The menu lists fast, cost-efficient models (Haiku, Sonnet, GPT Mini/Nano, Gemini Flash) directly; frontier and reasoning models that are overkill for translation (Opus, Fable, GPT-5 flagship, Gemini Pro, and similar) are tucked into an **Advanced Models** submenu. The split is decided from each model's name, so newly released models are sorted automatically.
 
+### Local Translation (PLaMo 3 Translate)
+
+Honyo can translate on your own computer with [PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF)
+by Preferred Networks, run by [llama.cpp](https://github.com/ggml-org/llama.cpp). No API key is
+needed and the text never leaves the machine.
+
+1. In the tray's **AI Model** menu, choose **Download PLaMo 3 Translate 2B (Local)…** (about 1.8 GB)
+   or **0.8B** (about 0.6 GB, lighter and faster, slightly less natural).
+2. Accept the [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en).
+   Personal and non-commercial use is free; commercial use requires registering with PFN (free up to
+   1 billion yen in revenue), and a separate agreement above that.
+3. Honyo downloads the model and the llama.cpp runtime (both pinned and checksum-verified), then the
+   model appears in the menu.
+
+The model is loaded when Honyo starts (or when you select it) and unloaded after 30 minutes without
+use or when you switch to a cloud model. It uses roughly the model's file size in memory plus a few
+hundred MB. Files are kept in `local-models/` in Honyo's data directory.
+
+The model supports 53 languages; Portuguese, Turkish, Ukrainian, Swedish, Danish, Norwegian and
+Finnish from Honyo's list are not among them. Since a translation model takes no instructions,
+custom instructions don't apply, and Honyo itself decides the direction from the text.
+
 ### Custom AI Models
 
 Use any AI model not included in the list:
@@ -372,6 +398,7 @@ npm start
 | `HONYO_MANAGED_JSON=path` | Read managed (MDM) settings from this file instead of the system location |
 | `HONYO_DEBUG_ECHO=text` | Run a no-network echo action through the popup/notification and history pipeline, then quit |
 | `HONYO_POPUP_SCREENSHOT=path.png` | Show a sample translation popup, capture it to a PNG and quit |
+| `HONYO_DEBUG_TRANSLATE=text` | Run one translation through the full pipeline (after `HONYO_DEBUG_TRANSLATE_DELAY` ms); with `HONYO_DEBUG_TRANSLATE_SHOT=prefix`, capture the popup and toast to `prefix-*.png` and quit |
 | `HONYO_SETTINGS_SCREENSHOT=path.png` | Capture the settings window to a PNG and quit (with `HONYO_SETTINGS_SCREENSHOT_TAB`, `HONYO_SETTINGS_SCREENSHOT_SCRIPT` to run JS first, and `HONYO_THEME=light\|dark`) |
 
 ### Project Structure
@@ -388,6 +415,7 @@ src/
 ├── ipc/                 # Typed IPC contracts shared by main, preload and renderer
 ├── keyboard/            # Keyboard event handling (uiohook-napi)
 ├── language/            # Language detection and constants
+├── local/               # Local translation: model/runtime download, llama-server, PFML3 prompts
 ├── preload/             # contextBridge preload scripts (bundled to build/preload)
 ├── renderer/            # Browser-side code for windows (bundled to build/renderer)
 ├── translation/         # AI translation (Vercel AI SDK)
@@ -404,7 +432,9 @@ window uses the same preload/context-isolation setup via `src/ipc/popup.ts`.
 
 - **Electron** - Desktop app framework
 - **TypeScript** - Language
-- **Vercel AI SDK** - AI provider integration (Anthropic, OpenAI, Google)
+- **Vercel AI SDK** - AI provider integration (Anthropic, OpenAI, Google, xAI)
+- **llama.cpp** + **PLaMo 3 Translate** - Local translation (downloaded on demand)
+- **ELD** - n-gram language detection for Latin-script languages
 - **uiohook-napi** - Global keyboard hooks
 - **electron-builder** - Packaging
 - **Vitest** - Testing

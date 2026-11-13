@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
@@ -45,5 +45,18 @@ describe.skipIf(process.platform === 'win32')('LocalServer.stop', () => {
     expect(await result).toContain('cancelled');
     for (let i = 0; i < 20 && isAlive(pid); i++) await new Promise(r => setTimeout(r, 50));
     expect(isAlive(pid)).toBe(false);
+  });
+
+  it('starts nothing after shutDown, even for a warm-up already asked for', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'honyo-server-'));
+    const bin = join(dir, 'fake-llama-server');
+    writeFileSync(bin, '#!/bin/sh\necho $$ > "$(dirname "$0")/child.pid"\nexec sleep 30\n');
+    chmodSync(bin, 0o755);
+
+    const srv = new LocalServer(bin, dir);
+    srv.shutDown();
+    await expect(srv.warmup(join(dir, 'model.gguf'))).rejects.toThrow('shutting down');
+    await new Promise(r => setTimeout(r, 200));
+    expect(existsSync(join(dir, 'child.pid'))).toBe(false);
   });
 });

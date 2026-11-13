@@ -29,19 +29,27 @@ export interface LocalTranslation {
 // One server per base directory. The promise is cached so concurrent callers
 // (launch warm-up and the first translation) share one instance; two would
 // each start a process and the untracked one would outlive the app.
-let server: { base: string; srv: Promise<LocalServer> } | undefined;
+let server: { base: string; srv: Promise<LocalServer>; ready?: LocalServer } | undefined;
+
+// Set when the app quits: no server may start after that, even one whose
+// start was already on its way (the launch warm-up).
+let shutDown = false;
 
 function getServer(base: string): Promise<LocalServer> {
+  if (shutDown) return Promise.reject(new Error('Honyo is quitting'));
   if (server?.base === base) return server.srv;
   const previous = server?.srv;
   const srv = (async (): Promise<LocalServer> => {
     (await previous?.catch(() => undefined))?.stop();
     const bin = await findServerBinary(base);
     if (!bin) throw new Error('Local runtime is not installed');
-    return new LocalServer(bin, base);
+    const srv = new LocalServer(bin, base);
+    if (shutDown) srv.shutDown();
+    return srv;
   })();
-  const entry = { base, srv };
+  const entry: { base: string; srv: Promise<LocalServer>; ready?: LocalServer } = { base, srv };
   server = entry;
+  void srv.then(s => (entry.ready = s)).catch(() => {});
   // Let a failed lookup (runtime not installed yet) be retried next time.
   srv.catch(() => {
     if (server === entry) server = undefined;
@@ -49,8 +57,20 @@ function getServer(base: string): Promise<LocalServer> {
   return srv;
 }
 
+/**
+ * Stop the server. Synchronous once it exists, so it also works right before
+ * `app.exit()`, which skips the asynchronous rest of the event loop.
+ */
 export function stopLocalServer(): void {
-  void server?.srv.then(srv => srv.stop()).catch(() => {});
+  if (server?.ready) server.ready.stop();
+  else void server?.srv.then(srv => srv.stop()).catch(() => {});
+}
+
+/** Stop the server for good: the app is quitting. */
+export function shutDownLocalServer(): void {
+  shutDown = true;
+  if (server?.ready) server.ready.shutDown();
+  else void server?.srv.then(srv => srv.shutDown()).catch(() => {});
 }
 
 /** Load the model now so the first translation does not wait for it. */

@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { stopKeyboardListener } from '../keyboard/index.ts';
-import { stopLocalServer } from '../local/index.ts';
+import { shutDownLocalServer } from '../local/index.ts';
 import { destroyTray, getTray } from '../ui/tray.ts';
 import { notify } from '../ui/notify.ts';
 
@@ -38,7 +38,7 @@ export function setupPlatformSpecific(): void {
 // Cleanup function
 export function cleanupAndExit(): void {
   stopKeyboardListener();
-  stopLocalServer();
+  shutDownLocalServer();
   destroyTray();
 
   // Wait a bit then force exit
@@ -59,7 +59,7 @@ export function setupShutdownHandlers(): void {
   app.on('before-quit', () => {
     console.log('App is about to quit, cleaning up...');
     stopKeyboardListener();
-    stopLocalServer();
+    shutDownLocalServer();
   });
 
   // Process termination handling

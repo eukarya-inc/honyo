@@ -1,6 +1,6 @@
 import type { Tray, MenuItemConstructorOptions } from 'electron';
-import { Menu, app } from 'electron';
-import { uIOhook } from 'uiohook-napi';
+import { cleanupAndExit } from '../app/lifecycle.ts';
+import { Menu } from 'electron';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -367,20 +367,9 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
       label: 'Quit',
       click: (): void => {
         console.log('Quit menu clicked');
-        // Stop uIOhook
-        try {
-          uIOhook.stop();
-        } catch (error) {
-          console.error('Error stopping uIOhook:', error);
-        }
-
-        // Destroy tray icon
-        if (tray) {
-          tray.destroy();
-        }
-
-        // Force quit app
-        app.exit(0);
+        // The same cleanup as a signal: keyboard hook, llama-server, tray. It
+        // forces the exit, which skips before-quit handlers.
+        cleanupAndExit();
       },
     },
   ]);

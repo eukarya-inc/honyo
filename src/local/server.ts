@@ -74,6 +74,8 @@ export class LocalServer {
   private readonly children = new Set<ChildProcess>();
   /** Bumped by stop(); a start begun before then gives up. */
   private epoch = 0;
+  /** After shutDown() no new server is started. */
+  private closed = false;
 
   private readonly serverBin: string;
   private readonly workDir: string;
@@ -90,6 +92,7 @@ export class LocalServer {
   }
 
   private async start(modelPath: string): Promise<Running> {
+    if (this.closed) throw new Error('llama-server start cancelled: shutting down');
     const epoch = this.epoch;
     const stopped = (): boolean => this.epoch !== epoch;
     if (!this.reaped) {
@@ -196,6 +199,12 @@ export class LocalServer {
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.idleTimer = setTimeout(() => this.stop(), IDLE_STOP_MS);
     this.idleTimer.unref();
+  }
+
+  /** Stop for good (the app is quitting): also refuse any later start. */
+  shutDown(): void {
+    this.closed = true;
+    this.stop();
   }
 
   /**

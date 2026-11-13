@@ -4,7 +4,7 @@
 
 import { execFile, spawn, type ChildProcess } from 'child_process';
 import { randomBytes } from 'crypto';
-import { readFile, writeFile, rm } from 'fs/promises';
+import { readdir, readFile, writeFile, rm } from 'fs/promises';
 import { createServer } from 'net';
 import { join } from 'path';
 import { PFML3_STOP } from './pfml3.ts';
@@ -34,6 +34,17 @@ function freePort(): Promise<number> {
  * is only killed when that PID still runs this exact binary, so a reused PID
  * belonging to another program is never touched.
  */
+/** Key files a run that ended abruptly left behind (one per start). */
+async function removeStaleKeys(dir: string): Promise<void> {
+  try {
+    for (const name of await readdir(dir)) {
+      if (/^llama-server-\d+\.key$/.test(name)) await rm(join(dir, name), { force: true });
+    }
+  } catch {
+    // directory missing: nothing to clean
+  }
+}
+
 async function reapStale(pidFile: string, serverBin: string): Promise<void> {
   let pid: number;
   try {
@@ -116,6 +127,7 @@ export class LocalServer {
     if (!this.reaped) {
       this.reaped = true;
       await reapStale(this.pidFile, this.serverBin);
+      await removeStaleKeys(this.workDir);
     }
     const port = await freePort();
     const apiKey = randomBytes(24).toString('hex');
@@ -174,7 +186,11 @@ export class LocalServer {
       }
       try {
         const res = await fetch(`${url}/health`);
-        if (res.ok) return { child, modelPath, url, apiKey, keyFile };
+        if (res.ok) {
+          // llama-server read the key at startup; don't leave it on disk.
+          await rm(keyFile, { force: true });
+          return { child, modelPath, url, apiKey, keyFile };
+        }
       } catch {
         // not listening yet
       }

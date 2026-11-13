@@ -1,5 +1,6 @@
 import { app } from 'electron';
 import { config as loadEnv } from 'dotenv';
+import { parseLocalModelKey } from '../local/index.ts';
 import { DEFAULT_MODEL_KEY, CUSTOM_MODEL_ID } from '../models.ts';
 import { getModelInfo } from '../models-remote.ts';
 import { getLanguageFromLocale } from '../language/index.ts';
@@ -86,7 +87,11 @@ export function initializeConfig(): void {
       profile.secondaryLanguage = defaults.secondaryLanguage;
     }
     // Validate AI model exists (custom model is always allowed)
-    if (profile.aiModel !== CUSTOM_MODEL_ID && !getModelInfo(profile.aiModel)) {
+    if (
+      profile.aiModel !== CUSTOM_MODEL_ID &&
+      !parseLocalModelKey(profile.aiModel) &&
+      !getModelInfo(profile.aiModel)
+    ) {
       console.log(`Invalid AI model in profile "${profile.name}": ${profile.aiModel}, resetting`);
       profile.aiModel = DEFAULT_MODEL_KEY;
     }

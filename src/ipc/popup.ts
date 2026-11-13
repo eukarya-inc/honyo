@@ -30,10 +30,14 @@ export interface ContextMenuRequest {
 export interface PopupEvents {
   'popup-config': PopupConfig;
   'translation-loading': void;
+  /** Message shown under the spinner while waiting (e.g. a model loading). */
+  'translation-status': string;
   'translation-langs': TranslationLangs;
   'translation-data': TranslationData;
   'translation-chunk': string;
   'translation-complete': string;
+  /** The action failed; the message is shown in place of a result. */
+  'translation-error': string;
   'back-translation-result': BackTranslationResult;
   'back-translation-error': string;
   'copy-all-requested': void;

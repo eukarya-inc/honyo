@@ -1,5 +1,6 @@
 import './app/dev-userdata.ts';
 import { app } from 'electron';
+import { syncLocalServer } from './local/app.ts';
 import { initializeConfig, getConfig } from './config/index.ts';
 import { loadModelsCache, refreshModels, setSelectedModelProvider } from './models-remote.ts';
 import { createTray, setupSettingsIPC } from './ui/index.ts';
@@ -22,6 +23,7 @@ import {
   showTranslationPopup,
   updatePopupLanguages,
   debugCapturePopup,
+  capturePopupTo,
 } from './ui/popup.ts';
 import { setupAutoUpdater } from './app/updater.ts';
 
@@ -95,6 +97,11 @@ function initialize(): void {
     // sync with config changes.
     registerShortcuts();
     setProfileChangedCallback(() => registerShortcuts());
+
+    // Load the local model at launch (and on profile switches) so the first
+    // translation doesn't wait for it.
+    syncLocalServer(getConfig().aiModel);
+    setProfileChangedCallback(() => syncLocalServer(getConfig().aiModel));
     app.on('will-quit', unregisterShortcuts);
 
     // History entries appear in the tray menu
@@ -118,6 +125,27 @@ function initialize(): void {
       void runAction('echo', { kind: 'text', text: echoText }).then(() => {
         setTimeout(() => app.quit(), 800);
       });
+    }
+
+    // Dev aid: HONYO_DEBUG_TRANSLATE=<text> runs the translate action through
+    // the full pipeline after HONYO_DEBUG_TRANSLATE_DELAY ms. With
+    // HONYO_DEBUG_TRANSLATE_SHOT=<prefix>, captures the popup 1s in
+    // (<prefix>-wait.png) and after the result (<prefix>-done.png), then quits.
+    const debugTranslate = process.env.HONYO_DEBUG_TRANSLATE;
+    if (debugTranslate) {
+      const delay = Number(process.env.HONYO_DEBUG_TRANSLATE_DELAY ?? 0);
+      const shot = process.env.HONYO_DEBUG_TRANSLATE_SHOT;
+      setTimeout(() => {
+        const started = Date.now();
+        if (shot) setTimeout(() => void capturePopupTo(`${shot}-wait.png`), 1000);
+        void runAction('translate', { kind: 'text', text: debugTranslate }).then(async () => {
+          console.log(`[debug-translate] done in ${Date.now() - started} ms`);
+          if (!shot) return;
+          await new Promise(r => setTimeout(r, 500));
+          await capturePopupTo(`${shot}-done.png`);
+          app.quit();
+        });
+      }, delay);
     }
 
     // Start listening for keyboard events

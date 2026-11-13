@@ -22,6 +22,7 @@ export const translateAction: Action = {
         ctx.signal,
         (sourceLanguage, targetLang) =>
           ctx.onMeta?.({ sourceLanguage, targetLanguage: targetLang }),
+        ctx.onStatus,
       );
       return { text };
     }
@@ -31,6 +32,7 @@ export const translateAction: Action = {
       targetLanguage,
       secondaryLanguage,
       ctx.signal,
+      ctx.onStatus,
     );
     const meta =
       result.sourceLanguage && result.targetLanguage

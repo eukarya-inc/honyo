@@ -30,6 +30,7 @@ const backButton = (): HTMLButtonElement => $<HTMLButtonElement>('#back-btn');
 const copyButton = (): HTMLButtonElement => $<HTMLButtonElement>('.copy-btn');
 const spinner = (): HTMLElement => $('#spinner-container');
 const caption = (): HTMLElement => $('#back-caption');
+const spinnerStatus = (): HTMLElement => $('#spinner-status');
 
 function formatLangs(l: Langs): string {
   return `${l.source} → ${l.target}`;
@@ -87,6 +88,7 @@ function updateBackButtonState(): void {
 // (see updateBackButtonState).
 function renderView(): void {
   const textEl = translationText();
+  textEl.classList.remove('error');
   const btn = backButton();
   if (view === 'back') {
     textEl.textContent = backTranslation ?? '';
@@ -169,10 +171,27 @@ popup.on('translation-loading', () => {
   currentTranslation = '';
   currentLangs = null;
   spinner().classList.add('active');
+  spinnerStatus().textContent = '';
   translationText().style.display = 'none';
   copyButton().disabled = true;
   resetBackState();
   updateBackButtonState();
+});
+
+popup.on('translation-error', message => {
+  isStreaming = false;
+  currentTranslation = '';
+  showContent();
+  resetBackState();
+  renderView();
+  translationText().textContent = message;
+  translationText().classList.add('error');
+  copyButton().disabled = true;
+  updateBackButtonState();
+});
+
+popup.on('translation-status', message => {
+  spinnerStatus().textContent = message;
 });
 
 // Language direction for the current translation (may arrive mid-stream).

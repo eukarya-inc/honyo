@@ -32,6 +32,7 @@
         --border-color: #e0e0e0;
         --text-primary: #333;
         --text-secondary: #666;
+        --error-color: #c62828;
         --btn-primary: #007aff;
         --btn-primary-hover: #0056b3;
         --btn-primary-active: #004494;
@@ -49,6 +50,7 @@
           --border-color: #3a3a3a;
           --text-primary: #f0f0f0;
           --text-secondary: #b0b0b0;
+          --error-color: #ff8a80;
           --btn-primary: #0a84ff;
           --btn-primary-hover: #0066cc;
           --btn-primary-active: #0051a3;
@@ -129,6 +131,9 @@
         color: var(--text-primary);
         word-wrap: break-word;
         white-space: pre-wrap;
+      }
+      .translation-text.error {
+        color: var(--error-color);
       }
       .copy-btn {
         background: var(--btn-primary);
@@ -245,6 +250,18 @@
       .spinner-container.active {
         display: flex;
       }
+      .spinner-container {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .spinner-status {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-align: center;
+      }
+      .spinner-status:empty {
+        display: none;
+      }
       .spinner {
         width: 40px;
         height: 40px;
@@ -336,6 +353,7 @@
       <div class="content">
         <div class="spinner-container" id="spinner-container">
           <div class="spinner"></div>
+          <div class="spinner-status" id="spinner-status"></div>
         </div>
         <div class="back-caption" id="back-caption" style="display: none"></div>
         <div class="translation-text" id="translation-text" style="display: none"></div>

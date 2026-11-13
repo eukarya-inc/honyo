@@ -27,6 +27,8 @@ export interface ActionContext {
   onChunk?: (textSoFar: string) => void;
   /** Called as soon as meta such as the language pair is known. */
   onMeta?: (meta: ActionMeta) => void;
+  /** Called with a progress message while waiting (e.g. a model loading). */
+  onStatus?: (message: string) => void;
   /** Whether the caller can display incremental output. */
   streaming: boolean;
 }

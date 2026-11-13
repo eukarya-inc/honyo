@@ -8,6 +8,14 @@ import { languages } from '../language/index.ts';
 import { CUSTOM_MODEL_ID, DEFAULT_MODEL_KEY, type AIModelInfo } from '../models.ts';
 import { getAvailableModels, getModelInfo, getDefaultModelKey } from '../models-remote.ts';
 import { classifyModelTier, type ModelTier } from '../models-tier.ts';
+import { LOCAL_MODELS, LOCAL_MODEL_PREFIX, parseLocalModelKey } from '../local/index.ts';
+import {
+  cancelLocalDownload,
+  downloadLocalModel,
+  isLocalDownloadRunning,
+  isLocalModelReady,
+  syncLocalServer,
+} from '../local/app.ts';
 import {
   getConfig,
   updateConfig,
@@ -184,11 +192,14 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
           ? 'Custom Model'
           : config.aiModel === DEFAULT_MODEL_KEY
             ? `Default (${getModelInfo(DEFAULT_MODEL_KEY)?.name ?? getDefaultModelKey()})`
-            : (getModelInfo(config.aiModel)?.name ?? 'Unknown')
+            : (LOCAL_MODELS[parseLocalModelKey(config.aiModel) ?? '']?.name ??
+              getModelInfo(config.aiModel)?.name ??
+              'Unknown')
       }`,
       submenu: ((): MenuItemConstructorOptions[] => {
         const select = (modelId: string): void => {
           updateConfig({ aiModel: modelId });
+          syncLocalServer(modelId);
           tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
         };
         const radio = (modelId: string, modelInfo: AIModelInfo): MenuItemConstructorOptions => ({
@@ -241,6 +252,36 @@ export function createTrayMenu(tray: Tray | null, updateTrayTitle: (title: strin
         if (advanced.length > 0) {
           menuItems.push({ type: 'separator' });
           menuItems.push({ label: 'Advanced Models', submenu: advanced });
+        }
+
+        // Local models (PLaMo 3 Translate on llama.cpp): selectable once
+        // downloaded, otherwise offered as a download.
+        menuItems.push({ type: 'separator' });
+        for (const m of Object.values(LOCAL_MODELS)) {
+          const key = LOCAL_MODEL_PREFIX + m.id;
+          if (isLocalModelReady(m.id)) {
+            menuItems.push({
+              label: m.name,
+              type: 'radio',
+              checked: config.aiModel === key,
+              click: (): void => select(key),
+            });
+          } else {
+            menuItems.push({
+              label: `Download ${m.name}…`,
+              enabled: !isLocalDownloadRunning(),
+              click: (): void => {
+                void downloadLocalModel(m.id, label => tray?.setTitle(label)).then(ok => {
+                  if (ok) select(key);
+                  else tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
+                });
+                tray?.setContextMenu(createTrayMenu(tray, updateTrayTitle));
+              },
+            });
+          }
+        }
+        if (isLocalDownloadRunning()) {
+          menuItems.push({ label: 'Cancel Download', click: cancelLocalDownload });
         }
 
         menuItems.push({ type: 'separator' });

@@ -1,5 +1,6 @@
 import { app, Notification } from 'electron';
 import { stopKeyboardListener } from '../keyboard/index.ts';
+import { stopLocalServer } from '../local/index.ts';
 import { destroyTray, getTray } from '../ui/tray.ts';
 
 // Prevent multiple instances
@@ -36,6 +37,7 @@ export function setupPlatformSpecific(): void {
 // Cleanup function
 export function cleanupAndExit(): void {
   stopKeyboardListener();
+  stopLocalServer();
   destroyTray();
 
   // Wait a bit then force exit
@@ -56,11 +58,18 @@ export function setupShutdownHandlers(): void {
   app.on('before-quit', () => {
     console.log('App is about to quit, cleaning up...');
     stopKeyboardListener();
+    stopLocalServer();
   });
 
   // Process termination handling
   process.on('SIGINT', () => {
     console.log('Received SIGINT, cleaning up...');
+    cleanupAndExit();
+  });
+
+  // Closing the terminal of `npm start` sends SIGHUP.
+  process.on('SIGHUP', () => {
+    console.log('Received SIGHUP, cleaning up...');
     cleanupAndExit();
   });
 

@@ -1,6 +1,7 @@
 // Runs an action end to end: pause check, cancellation of a previous run,
 // tray icon, popup or notification output, and history. The keyboard trigger
 // and future menu/shortcut entry points all go through here.
+import { describeError } from '../translation/errors.ts';
 import { clipboard, Notification } from 'electron';
 import { getConfig, getPausedState, getActiveProfileId } from '../config/index.ts';
 import { setTrayIcon } from '../ui/tray.ts';
@@ -8,6 +9,8 @@ import {
   showTranslationPopup,
   closePopup,
   updatePopupTranslation,
+  updatePopupStatus,
+  showPopupError,
   updatePopupLanguages,
   finalizePopupTranslation,
 } from '../ui/popup.ts';
@@ -79,6 +82,7 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       signal,
       streaming,
       ...(streaming ? { onChunk: (text: string): void => updatePopupTranslation(text) } : {}),
+      ...(usePopup ? { onStatus: (message: string): void => updatePopupStatus(message) } : {}),
       onMeta: (m): void => {
         meta = m;
         if (usePopup && m.sourceLanguage && m.targetLanguage) {
@@ -123,12 +127,17 @@ export async function runAction(actionId: string, input: ActionInput): Promise<v
       return;
     }
     console.error(`Error running ${action.name}:`, error);
-    const message = error instanceof Error ? error.message : String(error);
-    if (usePopup) closePopup();
-    new Notification({
-      title: `${action.name} Error`,
-      body: message.length > 140 ? message.slice(0, 140) + '...' : message,
-    }).show();
+    const message = describeError(error);
+    if (usePopup) {
+      // Keep the popup open and show why, instead of an empty window.
+      showPopupError(message);
+    } else {
+      // Notification mode: nothing is copied; say what went wrong.
+      new Notification({
+        title: `${action.name} Failed`,
+        body: message.length > 200 ? message.slice(0, 200) + '…' : message,
+      }).show();
+    }
   } finally {
     // Only reset state if this is still the current run
     if (currentAbortController?.signal === signal) {

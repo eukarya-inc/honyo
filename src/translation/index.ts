@@ -9,6 +9,8 @@ import { getConfig, getApiKeys, getProviderSettings } from '../config/index.ts';
 import type { Config, ApiKeys } from '../config/types.ts';
 import { parseTranslationOutput, isHeaderResolvable, type ParsedTranslation } from './parse.ts';
 import { detectScriptHint } from './script-hint.ts';
+import { parseLocalModelKey, translateLocal } from '../local/index.ts';
+import { localBaseDir } from '../local/app.ts';
 
 export type TranslationResult = ParsedTranslation;
 
@@ -127,8 +129,20 @@ export async function translateTextDetailed(
   primaryLanguage: string,
   secondaryLanguage: string,
   signal?: AbortSignal,
+  onStatus?: (message: string) => void,
 ): Promise<TranslationResult> {
   const config = getConfig();
+
+  // Local model: no API key, no system prompt; the app picks the direction.
+  const localId = parseLocalModelKey(config.aiModel);
+  if (localId) {
+    return translateLocal(localBaseDir(), text, primaryLanguage, secondaryLanguage, {
+      modelId: localId,
+      ...(signal ? { signal } : {}),
+      ...(onStatus ? { onStatus } : {}),
+    });
+  }
+
   const apiKeys = getApiKeys();
 
   // Validate API key (shows a Notification on failure) and throw on invalid.
@@ -225,8 +239,23 @@ export async function translateTextStreamingStrict(
   onChunk: (chunk: string) => void,
   signal?: AbortSignal,
   onLanguages?: (sourceLanguage: string, targetLanguage: string) => void,
+  onStatus?: (message: string) => void,
 ): Promise<string> {
   const config = getConfig();
+
+  const localId = parseLocalModelKey(config.aiModel);
+  if (localId) {
+    const r = await translateLocal(localBaseDir(), text, primaryLanguage, secondaryLanguage, {
+      modelId: localId,
+      onChunk,
+      ...(onLanguages ? { onLanguages } : {}),
+      ...(onStatus ? { onStatus } : {}),
+      ...(signal ? { signal } : {}),
+    });
+    onChunk(r.translation);
+    return r.translation;
+  }
+
   const apiKeys = getApiKeys();
 
   // Validate API key (shows a Notification on failure) and throw on invalid.
@@ -249,6 +278,12 @@ export async function translateTextStreamingStrict(
     text,
   );
 
+  // streamText does not throw: a provider error just ends the text stream
+  // early. Capture it and rethrow so callers can show it.
+  let streamError: unknown;
+  const onError = ({ error }: { error: unknown }): void => {
+    streamError ??= error;
+  };
   const result = streamText(
     signal
       ? {
@@ -256,11 +291,13 @@ export async function translateTextStreamingStrict(
           system: systemPrompt,
           prompt: text,
           abortSignal: signal,
+          onError,
         }
       : {
           model,
           system: systemPrompt,
           prompt: text,
+          onError,
         },
   );
 
@@ -285,6 +322,10 @@ export async function translateTextStreamingStrict(
     const parsed = parseTranslationOutput(fullRaw);
     emitLanguages(parsed);
     onChunk(parsed.translation);
+  }
+
+  if (streamError !== undefined) {
+    throw streamError instanceof Error ? streamError : new Error(JSON.stringify(streamError));
   }
 
   // Final flush (covers very short outputs that never crossed the buffer

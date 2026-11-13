@@ -1,4 +1,5 @@
 import { BrowserWindow, screen, ipcMain, clipboard, Menu, app } from 'electron';
+import { describeError } from '../translation/errors.ts';
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -31,6 +32,13 @@ let previousActiveApp: string | null = null;
 // resolved while a freshly-created popup window is still loading — IPC sent
 // before did-finish-load is dropped, so it is re-sent once the page is ready.
 let pendingLanguages: { sourceLanguage: string; targetLanguage: string } | null = null;
+// Latest streamed text / final result of the current cycle, re-delivered once a
+// new popup page finishes loading: a fast (local) model can finish before that,
+// and IPC sent before did-finish-load is dropped.
+let pendingChunk: string | null = null;
+let pendingStatus: string | null = null;
+let pendingError: string | null = null;
+let pendingComplete: string | null = null;
 
 // Send the current popup display config (read fresh so settings changes apply to
 // the next popup without a restart).
@@ -105,6 +113,10 @@ function restorePreviousApp(): void {
 export function showTranslationPopup(translation: string | null, originalText: string): void {
   // A new translation cycle starts: its language pair is not known yet.
   pendingLanguages = null;
+  pendingChunk = null;
+  pendingComplete = null;
+  pendingStatus = null;
+  pendingError = null;
 
   // Get cursor position with DPI scaling consideration
   const cursorPoint = screen.getCursorScreenPoint();
@@ -187,6 +199,16 @@ export function showTranslationPopup(translation: string | null, originalText: s
     if (pendingLanguages) {
       popupWindow?.webContents.send('translation-langs', pendingLanguages);
     }
+    if (pendingStatus !== null) {
+      popupWindow?.webContents.send('translation-status', pendingStatus);
+    }
+    if (pendingError !== null) {
+      popupWindow?.webContents.send('translation-error', pendingError);
+    } else if (pendingComplete !== null) {
+      popupWindow?.webContents.send('translation-complete', pendingComplete);
+    } else if (pendingChunk !== null) {
+      popupWindow?.webContents.send('translation-chunk', pendingChunk);
+    }
   });
 
   // Add blur event handler based on user preference
@@ -207,6 +229,7 @@ export function showTranslationPopup(translation: string | null, originalText: s
 }
 
 export function updatePopupTranslation(text: string): void {
+  pendingChunk = text;
   if (popupWindow && !popupWindow.isDestroyed()) {
     popupWindow.webContents.send('translation-chunk', text);
   }
@@ -219,7 +242,22 @@ export function updatePopupLanguages(sourceLanguage: string, targetLanguage: str
   }
 }
 
+export function updatePopupStatus(message: string): void {
+  pendingStatus = message;
+  if (popupWindow && !popupWindow.isDestroyed()) {
+    popupWindow.webContents.send('translation-status', message);
+  }
+}
+
+export function showPopupError(message: string): void {
+  pendingError = message;
+  if (popupWindow && !popupWindow.isDestroyed()) {
+    popupWindow.webContents.send('translation-error', message);
+  }
+}
+
 export function finalizePopupTranslation(text: string): void {
+  pendingComplete = text;
   if (popupWindow && !popupWindow.isDestroyed()) {
     popupWindow.webContents.send('translation-complete', text);
   }
@@ -261,10 +299,7 @@ export function setupPopupIPC(): void {
         });
       } catch (error) {
         if (popupWindow && !popupWindow.isDestroyed()) {
-          popupWindow.webContents.send(
-            'back-translation-error',
-            error instanceof Error ? error.message : String(error),
-          );
+          popupWindow.webContents.send('back-translation-error', describeError(error));
         }
       }
     })();
@@ -304,6 +339,13 @@ export function setupPopupIPC(): void {
 
 // Dev aid: HONYO_POPUP_SCREENSHOT=/path/out.png shows a sample translation,
 // captures the popup once rendered, then quits (see main.ts).
+/** Dev aid: write the popup as it looks right now to `path` (PNG). */
+export async function capturePopupTo(path: string): Promise<void> {
+  if (!popupWindow || popupWindow.isDestroyed()) return;
+  const image = await popupWindow.webContents.capturePage();
+  writeFileSync(path, image.toPNG());
+}
+
 export function debugCapturePopup(path: string): void {
   if (!popupWindow || popupWindow.isDestroyed()) return;
   popupWindow.webContents.on('console-message', event => {

@@ -14,7 +14,7 @@ export type TranslateTrigger = 'double-copy' | 'shortcut';
 export type TranslateSource = 'copy-selection' | 'clipboard';
 
 export type ModelOptionGroup =
-  'default' | 'anthropic' | 'openai' | 'google' | 'xai' | 'advanced' | 'custom';
+  'default' | 'anthropic' | 'openai' | 'google' | 'xai' | 'advanced' | 'local' | 'custom';
 
 export interface ModelOption {
   id: string;

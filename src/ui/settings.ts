@@ -1,4 +1,6 @@
 import { BrowserWindow, ipcMain, app, shell, nativeTheme } from 'electron';
+import { LOCAL_MODELS, LOCAL_MODEL_PREFIX } from '../local/index.ts';
+import { isLocalModelReady, syncLocalServer } from '../local/app.ts';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { writeFileSync } from 'fs';
@@ -168,6 +170,12 @@ function modelOptions(): ModelOption[] {
     }
   }
   options.push(...advanced);
+  // Downloaded local models (the tray offers the download itself).
+  for (const m of Object.values(LOCAL_MODELS)) {
+    if (isLocalModelReady(m.id)) {
+      options.push({ id: LOCAL_MODEL_PREFIX + m.id, name: m.name, group: 'local' });
+    }
+  }
   options.push({ id: CUSTOM_MODEL_ID, name: 'Custom Model', group: 'custom' });
   return options;
 }
@@ -289,6 +297,8 @@ function applyPatch(patch: SettingsPatch): void {
     updates.openAtLogin = patch.openAtLogin;
   }
   if (Object.keys(updates).length > 0) updateConfig(updates);
+  // Load (or unload) the local model to match a model picked here.
+  if (updates.aiModel !== undefined) syncLocalServer(updates.aiModel);
 }
 
 // --- Prompt generation -----------------------------------------------------

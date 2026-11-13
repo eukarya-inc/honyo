@@ -70,6 +70,10 @@ export class LocalServer {
   private running: Running | undefined;
   private starting: { modelPath: string; promise: Promise<Running> } | undefined;
   private idleTimer: NodeJS.Timeout | undefined;
+  /** Every live child, including one still loading its model. */
+  private readonly children = new Set<ChildProcess>();
+  /** Bumped by stop(); a start begun before then gives up. */
+  private epoch = 0;
 
   private readonly serverBin: string;
   private readonly workDir: string;
@@ -86,6 +90,8 @@ export class LocalServer {
   }
 
   private async start(modelPath: string): Promise<Running> {
+    const epoch = this.epoch;
+    const stopped = (): boolean => this.epoch !== epoch;
     if (!this.reaped) {
       this.reaped = true;
       await reapStale(this.pidFile, this.serverBin);
@@ -114,13 +120,16 @@ export class LocalServer {
       '-np',
       '1',
     ];
+    if (stopped()) throw new Error('llama-server start cancelled');
     const child = spawn(this.serverBin, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    this.children.add(child);
     let stderrTail = '';
     child.stderr?.on('data', (d: Buffer) => {
       stderrTail = (stderrTail + d.toString()).slice(-4000);
     });
     if (child.pid) void writeFile(this.pidFile, String(child.pid));
     child.on('exit', () => {
+      this.children.delete(child);
       if (this.running?.child === child) this.running = undefined;
       void rm(keyFile, { force: true });
       void readFile(this.pidFile, 'utf8')
@@ -131,6 +140,11 @@ export class LocalServer {
     const url = `http://127.0.0.1:${port}`;
     const deadline = Date.now() + STARTUP_TIMEOUT_MS;
     while (Date.now() < deadline) {
+      if (stopped()) {
+        // stop() was called while the model loaded (e.g. the app quit).
+        child.kill();
+        throw new Error('llama-server start cancelled');
+      }
       if (child.exitCode !== null) {
         throw new Error(`llama-server exited (${child.exitCode}):\n${stderrTail}`);
       }
@@ -184,12 +198,17 @@ export class LocalServer {
     this.idleTimer.unref();
   }
 
-  /** Stop the server process (by its PID, via the child handle). */
+  /**
+   * Stop the server, including one still loading its model, by killing the
+   * child processes we spawned (by PID, via their handles).
+   */
   stop(): void {
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.idleTimer = undefined;
-    this.running?.child.kill();
+    this.epoch++;
+    for (const child of this.children) child.kill();
     this.running = undefined;
+    this.starting = undefined;
   }
 
   /**

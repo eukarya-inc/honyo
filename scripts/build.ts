@@ -9,7 +9,7 @@
 
 import esbuild from 'esbuild';
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, statSync, rmSync } from 'fs';
 import { buildRenderer } from './build-renderer.ts';
@@ -43,6 +43,13 @@ function findTsFiles(dir: string, files: string[] = []): string[] {
 
 const entryPoints = findTsFiles(join(rootDir, 'src'));
 
+// Package entry points whose `exports` offer only an "import" condition, so
+// require() from the CommonJS build fails (ERR_PACKAGE_PATH_NOT_EXPORTED).
+// They are bundled to these paths under build/.
+const VENDORED: Record<string, string> = {
+  'eld/small': 'vendor/eld-small.js',
+};
+
 console.log('Building with esbuild...');
 
 try {
@@ -65,6 +72,19 @@ try {
   
   console.log('Build completed successfully with esbuild!');
   
+  // ESM-only dependencies the CommonJS build can't require(): bundle each
+  // into build/vendor as CommonJS, and point the requires there (below).
+  for (const [specifier, file] of Object.entries(VENDORED)) {
+    await esbuild.build({
+      stdin: { contents: `export * from '${specifier}';`, resolveDir: rootDir },
+      bundle: true,
+      format: 'cjs',
+      platform: 'node',
+      target: 'node18',
+      outfile: join(buildDir, file),
+    });
+  }
+
   // Fix imports with .ts extensions
   console.log('Fixing import extensions...');
   await fixImports(buildDir);
@@ -94,6 +114,12 @@ async function fixImports(dir: string): Promise<void> {
       content = content.replace(/import\s*\(\s*["'](.+?)\.ts["']\s*\)/g, 'import("$1.js")');
       // Fix require statements with .ts extensions (for CommonJS)
       content = content.replace(/require\s*\(\s*["'](.+?)\.ts["']\s*\)/g, 'require("$1.js")');
+      // Point requires of vendored ESM-only packages at their CommonJS bundle
+      for (const [specifier, file] of Object.entries(VENDORED)) {
+        let target = relative(dirname(fullPath), join(buildDir, file));
+        if (!target.startsWith('.')) target = `./${target}`;
+        content = content.split(`require("${specifier}")`).join(`require("${target}")`);
+      }
       await writeFile(fullPath, content);
     }
   }

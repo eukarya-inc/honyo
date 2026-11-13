@@ -26,7 +26,11 @@ const TOAST_HEIGHT = 92;
 const TOAST_MARGIN = 16;
 const TOAST_MS = 6000;
 
-const rootDir = join(dirname(fileURLToPath(import.meta.url)), '../..');
+// This file's directory in both the ESM dev run and the CommonJS build
+// (where import.meta.url is undefined), as in popup.ts.
+const currentDir =
+  typeof import.meta.url !== 'undefined' ? dirname(fileURLToPath(import.meta.url)) : __dirname;
+const rootDir = join(currentDir, '../..');
 
 let toast: BrowserWindow | null = null;
 let hideTimer: NodeJS.Timeout | undefined;

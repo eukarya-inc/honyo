@@ -11,20 +11,14 @@
 
 ## Features
 
-- ⚡ **Instant Translation** - Double Ctrl/Cmd+C to translate any selected text
-- 🌍 **Multi-Language Support** - 61 built-in languages (including Easy Japanese) plus custom language support
-- 🤖 **Auto-Updating AI Models** - Claude, GPT, Gemini, Grok (xAI), and custom models, with the model list kept up to date automatically
-- 💻 **Local Translation** - Download PLaMo 3 Translate and translate on your own computer, with no API key and no text leaving the machine
-- 🔁 **Back-Translation** - Instantly check quality by translating the result back to the source language
-- 🧭 **Language Direction Display** - See the detected source → target language at a glance
-- 💬 **Two Display Modes** - Notification with auto-copy or resizable popup window
-- 🎨 **Customizable** - Custom instructions (with AI assist), languages, and translation rules
-- ⌨️ **Custom Shortcuts** - Keep the double Ctrl/Cmd+C trigger or set your own key combination, plus one shortcut per profile
-- 🕘 **History** - Recent results in the tray menu (Clipy-style), click to copy; can be disabled or cleared
-- 👤 **Profiles** - Keep separate sets of languages, models, prompts and API keys (personal, work, per-client) and switch from the tray
-- 🔐 **Encrypted keys & custom endpoints** - API keys are stored with the OS keychain; each provider can point at a gateway or proxy
-- 🏢 **Managed deployment** - IT can push provider keys and gateway endpoints via MDM (macOS profiles, Windows policies, or a JSON file); users see them locked
-- 🪶 **Lightweight** - Minimal resource usage, lives in your system tray
+- ⚡ **Instant Translation** - Select text and press Ctrl/Cmd+C twice, or a shortcut of your choice
+- 🤖 **Your Choice of AI** - Claude, GPT, Gemini or Grok with your own API key; the model list stays up to date
+- 💻 **Local Translation** - PLaMo 3 Translate runs on your computer: no API key, and your text never leaves the machine
+- 🌍 **61 Languages** - Including Easy Japanese (やさしい日本語), plus any language you add
+- 🔁 **Back-Translation** - Translate the result back to check it
+- 💬 **Popup or Notification** - Read the result in a popup, or have it copied to the clipboard
+- 🎨 **Custom Instructions** - Set the tone and terminology, or describe what you want and let the AI write them
+- 👤 **Profiles** - Separate languages, models and instructions for work, personal use or each client
 
 ## Installation
 

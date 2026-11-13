@@ -95,6 +95,10 @@ const EXCLUDE_ID = [
   'video',
   'omni',
   'imagine',
+  // OpenAI's Daybreak cyber-defense models: approved-access only, and not
+  // meant for translation.
+  'daybreak',
+  '-cyber',
 ];
 
 function isTextChatModel(id: string, outputs: string[]): boolean {
@@ -242,6 +246,8 @@ function buildAvailableModels(fromCache: ModelsCache | null): Record<string, AIM
     const fetched = fromCache?.models[provider];
     if (fetched && fetched.length > 0) {
       for (const info of fetched) {
+        // A cache written before an exclusion was added may still list it.
+        if (EXCLUDE_ID.some(e => info.model.toLowerCase().includes(e))) continue;
         const staticMatch = staticByModelId.get(info.model);
         const key = staticMatch ? staticMatch[0] : info.model;
         result[key] = {

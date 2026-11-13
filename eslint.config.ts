@@ -1,7 +1,7 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
-import importPlugin from 'eslint-plugin-import';
+import importX from 'eslint-plugin-import-x';
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -21,7 +21,7 @@ export default tseslint.config(
       },
     },
     plugins: {
-      import: importPlugin,
+      'import-x': importX,
     },
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'error',
@@ -30,7 +30,7 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       '@typescript-eslint/no-non-null-assertion': 'warn',
       'no-console': 'off',
-      'import/extensions': [
+      'import-x/extensions': [
         'error',
         'always',
         {

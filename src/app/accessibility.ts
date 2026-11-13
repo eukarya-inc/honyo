@@ -36,11 +36,8 @@ export async function checkAccessibilityPermission(): Promise<boolean> {
   const actualBundleId = getActualBundleId();
   console.log('Actual Bundle ID:', actualBundleId);
 
-  // Try different approaches for checking accessibility
-  let isTrusted = false;
-
   // First try without prompting
-  isTrusted = systemPreferences.isTrustedAccessibilityClient(false);
+  let isTrusted = systemPreferences.isTrustedAccessibilityClient(false);
   console.log('Is trusted (no prompt):', isTrusted);
 
   if (!isTrusted && app.isPackaged) {

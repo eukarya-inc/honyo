@@ -116,7 +116,9 @@ async function fixImports(dir: string): Promise<void> {
       content = content.replace(/require\s*\(\s*["'](.+?)\.ts["']\s*\)/g, 'require("$1.js")');
       // Point requires of vendored ESM-only packages at their CommonJS bundle
       for (const [specifier, file] of Object.entries(VENDORED)) {
-        let target = relative(dirname(fullPath), join(buildDir, file));
+        // Forward slashes: on Windows `relative` returns backslashes, which
+        // would be read as escapes inside the string literal ("..\vendor").
+        let target = relative(dirname(fullPath), join(buildDir, file)).replaceAll('\\', '/');
         if (!target.startsWith('.')) target = `./${target}`;
         content = content.split(`require("${specifier}")`).join(`require("${target}")`);
       }

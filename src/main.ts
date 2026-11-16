@@ -1,4 +1,5 @@
 import './app/dev-userdata.ts';
+import { writeFileSync } from 'node:fs';
 import { app } from 'electron';
 import { syncLocalServer } from './local/app.ts';
 import { captureToastTo } from './ui/notify.ts';
@@ -27,6 +28,16 @@ import {
   capturePopupTo,
 } from './ui/popup.ts';
 import { setupAutoUpdater } from './app/updater.ts';
+
+const smokeFile = process.env.HONYO_SMOKE_TEST;
+if (smokeFile) {
+  // A rejection in startup would otherwise leave the app idling in the tray
+  // until the CI timeout; fail fast instead.
+  process.on('unhandledRejection', error => {
+    console.error('[smoke-test] unhandled rejection:', error);
+    app.exit(1);
+  });
+}
 
 // Initialize the app
 function initialize(): void {
@@ -160,6 +171,16 @@ function initialize(): void {
       startKeyboardListener();
     } catch (error) {
       console.error('Failed to start keyboard listener:', error);
+      app.quit();
+      return;
+    }
+
+    // CI aid: HONYO_SMOKE_TEST=<file> writes "ok" to <file> once startup has
+    // finished and quits. The exit code alone can't tell success, because the
+    // uncaughtException handler exits with 0; a missing file means failure.
+    if (smokeFile) {
+      writeFileSync(smokeFile, 'ok');
+      console.log(`[smoke-test] started up, wrote ${smokeFile}`);
       app.quit();
     }
   });

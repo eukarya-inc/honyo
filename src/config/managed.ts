@@ -144,7 +144,12 @@ function readPlist(path: string): unknown {
 
 function readRegistry(root: string): unknown {
   try {
-    const output = execFileSync('reg', ['query', root, '/s'], { encoding: 'utf8', timeout: 3000 });
+    // stderr ignored: reg.exe prints "ERROR: ... unable to find" for an absent key
+    const output = execFileSync('reg', ['query', root, '/s'], {
+      encoding: 'utf8',
+      timeout: 3000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
     return parseRegistryQuery(output, root);
   } catch {
     // Key absent (the common case) or reg.exe unavailable.

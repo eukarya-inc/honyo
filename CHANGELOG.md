@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.7.2](https://github.com/rot1024/honyo/compare/v0.7.1...v0.7.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* packaged app failed to start on Windows (Cannot find module) ([#11](https://github.com/rot1024/honyo/issues/11)) ([58a0caf](https://github.com/rot1024/honyo/commit/58a0caf740df3513afd1ba2bc384e26e9a9421d3))
+* stop printing reg.exe errors when no Windows policy key exists ([7077782](https://github.com/rot1024/honyo/commit/7077782786d6282c7e69a088eff8fbcdacef5539))
+
+
+### Documentation
+
+* Homebrew install and a shorter, user-oriented README ([f9d18d6](https://github.com/rot1024/honyo/commit/f9d18d6c78f57fa52c5eb413dcebd9bed48a704a))
+
 ### [0.7.1](https://github.com/rot1024/honyo/compare/v0.7.0...v0.7.1) (2026-11-13)
 
 

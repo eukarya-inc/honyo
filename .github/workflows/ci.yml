@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2
         with:
           egress-policy: audit
       - name: Checkout code
@@ -79,3 +79,44 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  windows-build-and-launch:
+    # Same runner as the release build: the windows-latest image ships Visual
+    # Studio 18, which node-gyp cannot use to rebuild uiohook-napi
+    runs-on: windows-2022
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2
+        with:
+          egress-policy: audit
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '23'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package Electron app
+        run: npx electron-builder --win --x64 --publish never
+        env:
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+
+      - name: Launch packaged app
+        run: ./scripts/smoke-test.ps1 -Exe dist/win-unpacked/Honyo.exe -TimeoutSec 90
+        shell: pwsh
+
+      - name: Upload installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-x64-installer
+          path: dist/*.exe
+          retention-days: 7
